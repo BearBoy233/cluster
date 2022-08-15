@@ -1,0 +1,10 @@
+
+<launch>
+    <!-- vim: set ft=xml noet : -->
+    <!-- base node launch file-->
+    <!-- mavconsole -->
+    <node pkg="mavconsole" type="mavconsole" name="mavconsole" output="screen" respawn="true">
+        <!-- common param -->
+        <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+    </node>
+</launch>

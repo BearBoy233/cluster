@@ -1,0 +1,13 @@
+<launch>
+    <!-- vim: set ft=xml noet : -->
+    <!-- px4_bridge node launch file-->
+    <!-- px4_bridge param -->
+    <arg name="Flag_1Mavros" default="0" />
+    <!-- px4_bridge -->
+    <node pkg="mavcomm" type="px4_bridge" name="px4_bridge" output="screen" respawn="true">
+        <!-- common param -->
+        <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+        <!-- px4_bridge param -->
+        <param name="Flag_1Mavros" value="$(arg Flag_1Mavros)" />
+    </node>
+</launch>

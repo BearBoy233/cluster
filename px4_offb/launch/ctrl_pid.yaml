@@ -1,0 +1,24 @@
+
+Kp_x: 2.0
+Ki_x: 0.0
+Kd_x: 1.1
+
+Kp_y: 2.0
+Ki_y: 0.0
+Kd_y: 1.1
+
+Kp_z: 1.2
+Ki_z: 0.0
+Kd_z: 0.2
+
+Kp_yaw: 2.5
+Ki_yaw: 0.0
+Kd_yaw: 0.01
+
+maxVelocity_x: 0.8
+maxVelocity_y: 0.8
+maxVelocity_z: 0.6
+maxVelocity_yaw: 1.4
+
+init_takeoff_z: 1.0
+

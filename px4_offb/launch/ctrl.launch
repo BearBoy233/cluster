@@ -1,0 +1,13 @@
+
+<launch>
+  <!-- vim: set ft=xml noet : -->
+  <!-- base node launch file-->
+
+  <!-- arg name="uavname" default="uav1" / -->
+
+  <node pkg="px4_offb" type="uav_ctrl" name="uav_ctrl" output="screen">
+    <rosparam command="load" file="$(find px4_offb)/launch/ctrl_pid.yaml" />
+  </node>
+
+</launch>
+

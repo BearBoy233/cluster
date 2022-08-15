@@ -1,0 +1,10 @@
+
+<launch>
+  <!-- vim: set ft=xml noet : -->
+  <!-- base node launch file-->
+
+  <node name="vins_fusion" pkg="vins"  type="vins_node" output="screen" args="$(find mavconsole)/launch/vins/d435i_config.yaml"/>
+  <!-- 
+    <node name="loop_fusion" pkg="loop_fusion" type="loop_fusion_node" args="$(find mavconsole)/launch/vins/d435i_config.yaml" output="screen"/> 
+  -->
+</launch> 

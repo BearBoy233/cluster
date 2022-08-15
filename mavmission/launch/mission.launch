@@ -1,0 +1,13 @@
+
+<launch>
+  <!-- vim: set ft=xml noet : -->
+  <!-- base node launch file-->
+
+  <!-- arg name="uavname" default="uav1" / -->
+
+  <node pkg="mav_mission" type="uav_mission" name="uav_mission" output="screen">
+
+  </node>
+
+</launch>
+

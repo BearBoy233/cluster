@@ -1,0 +1,22 @@
+
+<launch>
+  <!-- vim: set ft=xml noet : -->
+  <!-- base node launch file-->
+
+  <!-- px4_offb param -->
+  <arg name="flag_1vrpn_2vio_3both" default="3" />
+  <arg name="vio_odomTopic" default="/camera/odom/sample" />
+  <!-- nav_msgs::Odometry
+	[/camera/odom/sample ] t265   
+        [/vins_fusion/odometry ] vins
+  -->
+
+  <node pkg="px4_offb" type="vision_pose" name="vision_pose" output="screen">
+    <!-- common param -->          
+    <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+    <!-- common param -->
+    <param name="flag_1vrpn_2vio_3both" value="$(arg flag_1vrpn_2vio_3both)" type="int" />
+    <param name="vio_odomTopic" value="$(arg vio_odomTopic)" type="string" />
+  </node>
+
+</launch>

@@ -1,0 +1,15 @@
+<launch>  
+    <!-- vim: set ft=xml noet : -->
+    <!-- base node launch file-->
+    <!-- kcf_tracker param -->
+    <node pkg="kcf_tracker" type="kcf_tracker_node" name="kcf_tracker_node" output="screen">
+        <!-- common param -->          
+        <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+        <!-- kcf_tracker param -->	 
+        <param name="response_threshold" value="0.25" type="double" />
+        <param name="trackFailCnt_threshold" value="20" type="int" />
+        <param name="MULTISCALE" value="false" type="bool" />
+        <param name="camera_topic" value="/usb_cam/image_raw" />
+	<param name="camera_info_topic" value="/usb_cam/camera_info" />
+    </node>
+</launch>

@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mavcomm_msgs</name>
+  <version>1.13.0</version>
+  <description>
+    mavcomm_msgs defines messages for MAVCOMM.
+  </description>
+
+  <maintainer email="zy@todo.com">zy@todo</maintainer>
+  <author email="zy@todo.com">zy@todo</author>
+  <license>GPLv3</license>
+  <license>LGPLv3</license>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geographic_msgs</depend>
+  <!-- XXX needed for users of mavlink_convert.h
+  <build_export_depend>libmavconn</build_export_depend>
+  -->
+
+  <export>
+    <architecture_independent/>
+  </export>
+</package>
