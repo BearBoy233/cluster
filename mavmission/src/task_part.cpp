@@ -9,7 +9,7 @@
 using namespace mav_mission;
 
 //-------------------------------------------------
-// Init
+// Init 初始化
 //-------------------------------------------------
 Task_part::Task_part():
     tp_nh("~tp")        // /uav_mission/tp/test
@@ -30,7 +30,9 @@ void Task_part::task_init()
 
 }
 
-
+//-------------------------------------------------
+// 回调函数
+//-------------------------------------------------
 void Task_part::test_cb(const std_msgs::Int32::ConstPtr &msg)
 {
 		int t;
@@ -40,7 +42,13 @@ void Task_part::test_cb(const std_msgs::Int32::ConstPtr &msg)
         std::cout << "t=" << t << std::endl;
 }
 
-// 任务 初始化
+
+//-------------------------------------------------
+// Public Func
+//-------------------------------------------------
+// 任务的初始化
+
+
 void Task_part::mission_init(const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
     // msg

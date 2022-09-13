@@ -206,7 +206,7 @@ void fast_sub_cb(const mav_mission::PositionCommand::ConstPtr &msg);
 public:
 
 	void tracker_init();
-	void tracker_load_param();
+	// void tracker_load_param();
 
 private:
 	// ROS get param
