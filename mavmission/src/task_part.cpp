@@ -1,8 +1,3 @@
-// 集群系统 任务
-// 设置
-// 校验
-// 保存
-// 读取
 
 #include <task_part.h>
 
@@ -17,7 +12,9 @@ Task_part::Task_part():
     // 数据 init
     task_init();
 
+    // 话题订阅
     test_sub = tp_nh.subscribe("test", 1, &Task_part::test_cb, this);
+
 
 
 }

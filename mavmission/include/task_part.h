@@ -1,4 +1,6 @@
-// 任务设置
+// 集群任务的管理
+
+// 任务的 设置、校验、保存、读取
 
 // #pragma once
 // #ifndef 
@@ -18,9 +20,25 @@ class Task_part{
 public:
 	Task_part();
 	~Task_part() {};
+
+private:
+    // 用于 订阅 发布 param读取
+    ros::NodeHandle tp_nh;
+    
+    // 订阅话题
+    ros::Subscriber test_sub;
+
+    // 订阅话题 回调函数
+    void test_cb(const std_msgs::Int32::ConstPtr &msg);
+
+
+    // param 参数读取 
+    int my_id;			// my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
+
 private:
     // 数值 初始化
     void task_init();
+
 
 public:
     // func ros sub
@@ -40,14 +58,7 @@ public:
 
 private:
 
-    ros::NodeHandle tp_nh;
-
-    ros::Subscriber test_sub;
-
-    void test_cb(const std_msgs::Int32::ConstPtr &msg);
-
-
-	int my_id;			// my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
+ 
 
     // 总的任务设置
     int mis_total;                  // 当前执行任务 总数目
