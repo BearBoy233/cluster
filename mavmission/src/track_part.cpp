@@ -1,4 +1,47 @@
 
+//-------------------------------------------------
+// tracker part
+//-------------------------------------------------
+
+void Mav_Mission::tracker_init()
+{
+    //-------------------------------------------------
+    // 追踪 Track
+    // TODO
+    // 1. 来自其他无人机 的 目标位置信息
+
+    // 2. 来自本机的 目标位置信息
+
+	// tracker_load_param();
+}
+
+//-------------------------------------------------
+// tracker part
+//-------------------------------------------------
+public:
+
+	void tracker_init();
+	// void tracker_load_param();
+
+private:
+	// ROS get param
+	double init_takeoff_z;  //初始起飞高度
+
+	// 幅值限制
+	float maxVelocity_x;
+	float maxVelocity_y;
+	float maxVelocity_z;
+	float maxVelocity_yaw;
+
+	// PID参数
+	struct pid {
+    	double p = 0.0;
+    	double i = 0.0;
+    	double d = 0.0;
+	} pid_x, pid_y, pid_z, pid_yaw;
+
+
+
 
 void Mav_Mission::tracker_load_param()
 {

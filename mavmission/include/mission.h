@@ -122,42 +122,7 @@ geometry_msgs::Pose Mission_pose_current;   // 当前目标位置
 // 任务设置 部分 mission
 
 
-//-------------------------------------------------
-// formation part
-//-------------------------------------------------
 
-void formation_init();
-
-void ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-
-void set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-
-//################################################################------编队飞行模块
-// 订阅其他无人机的位置 (已经减掉 队形偏差量了)
-ros::Subscriber ot_loc_pos_enu_sub;
-mavcomm_msgs::local_pos_enu msg_ot_local_pos_enu;
-double ot_pos_x[NNN];
-double ot_pos_y[NNN];
-double ot_pos_z[NNN];
-double ot_pos_yaw[NNN];
-// TODO 待拓展 当前只能编一组队
-int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； /TODO 参与编队的其他无人机 Num;
-int ot_num_sum;         // 编组内无人机个数
-int ot_this_num;        // 本机编组 TODO
-// 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉 (px4_bridge 中完成)
-// 当前仅考虑 室内定位系统(ENU) 的情况 (TODO GPS/ VINS...)
-// 本机 编队偏差
-float ot_offset_x = 0.0;
-float ot_offset_y = 0.0;
-float ot_offset_z = 0.0;      // 暂时不用
-float ot_offset_yaw = 0.0;    // 暂时不用
-
-// mavcomm 初始设置无人机编队 队形
-ros::Subscriber set_local_pos_enu_sub;
-mavcomm_msgs::local_pos_enu msg_local_pos_enu;
-
-// 无人机队形 设置回应
-ros::Publisher set_local_pos_enu_pub;         // 告知地面站 无人机编队误差设置
 
 
 
@@ -165,19 +130,6 @@ ros::Publisher set_local_pos_enu_pub;         // 告知地面站 无人机编队
 //-------------------------------------------------
 // mission part
 //-------------------------------------------------
-
-// mission part
-void mission_init();
-
-void mission_set_cb(const mavcomm_msgs::mission_set::ConstPtr& msg);
-
-void mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& msg);
-
-
-
-ros::Publisher mission_back_info_pub;
-ros::Subscriber mission_info_sub;
-ros::Subscriber mission_set_sub;
 
 int flag_mission_set = 0;           // 任务设置状态  // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
 
@@ -185,45 +137,7 @@ int flag_mission_start = 0;         // 任务执行状态    0-未开始 1-任�
 int flag_mission_sync = 0;          // 任务同步标志    1-顺序执行 2-同步执行
 int flag_mission_pause_task = 0;    // 任务暂停       1暂停&悬停 /2暂停&原地降落 /3暂停&起飞位置降落
 
-mavcomm_msgs::mission_info msg_mission_info;
-mavcomm_msgs::mission_back_info msg_mission_back_info;
-mavcomm_msgs::mission_set msg_mission_set;
 
-
-
-
-// ----无人机避障模块 (fast_planner)
-// fast
-void fast_init();
-ros::Subscriber fast_sub;
-void fast_sub_cb(const mav_mission::PositionCommand::ConstPtr &msg);
-
-
-
-//-------------------------------------------------
-// tracker part
-//-------------------------------------------------
-public:
-
-	void tracker_init();
-	// void tracker_load_param();
-
-private:
-	// ROS get param
-	double init_takeoff_z;  //初始起飞高度
-
-	// 幅值限制
-	float maxVelocity_x;
-	float maxVelocity_y;
-	float maxVelocity_z;
-	float maxVelocity_yaw;
-
-	// PID参数
-	struct pid {
-    	double p = 0.0;
-    	double i = 0.0;
-    	double d = 0.0;
-	} pid_x, pid_y, pid_z, pid_yaw;
 
 
 };
@@ -231,9 +145,6 @@ private:
 
 
 }	// namespace mav_mission
-
-
-
 
 ///-----------------------------------------------------------------------------------------
 //			工具类

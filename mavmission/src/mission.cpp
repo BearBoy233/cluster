@@ -17,17 +17,11 @@ Mav_Mission::Mav_Mission() :
 	signal(SIGINT, quit_handler);
 
     // Init
+    commom_init();
+
     // TBD
     // mission_state = UNINIT;
     // mission_state_last = UNINIT;
-
-    // 编队偏差
-    for (int i=1;i<NNN;i++)
-    { 
-        flag_ot_num[i] = 0;   //以后归    flag
-    }
-
-    mission_init();
 
 	// Init tracker
 	// tracker_load_param();
@@ -38,6 +32,7 @@ void Mav_Mission::run()
 	ros::Rate loop_rate(20);
 
     int temp = ID_GCS;
+
     /*
 	spinner.start();
 	ros::waitForShutdown();
@@ -45,23 +40,18 @@ void Mav_Mission::run()
 	ROS_INFO("Stopping mavros...");
 	spinner.stop();
     */
-   	while (	ros::ok() ) 
+   	
+    while (	ros::ok() ) 
     {	
 		// ros::spinOnce();
 
         // TODO 广播 本机任务 状态信息
 
-
         if ( flag_mission_set == 1 || flag_mission_set == 2  ) // 0未设置 1设置中 2未校准 3校正完 4校准错误
         {   //等待地面站 发过来的 mission
 
-            // 
-
-        
-        
+            //     
         }
-
-
 
         if ( flag_mission_start )
         {
@@ -89,7 +79,7 @@ struct MIS {
 
         PoseControl();  // 位置控制 + fast_planner
 
-        formation_pidVelocityControl(); // 编队控制
+        // formation_pidVelocityControl(); // 编队控制
 
         /*
             case FORMATION_FLY:
@@ -161,29 +151,7 @@ void Mav_Mission::commom_init()
 	// 无人机 ENU 航点Pos(flag=1) 编队误差设计(flag=2) 
     //### set_local_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, set_local_pos_enu_cb );
 
-
-
 }
-
-
-
-
-//-------------------------------------------------
-// tracker part
-//-------------------------------------------------
-
-void Mav_Mission::tracker_init()
-{
-    //-------------------------------------------------
-    // 追踪 Track
-    // TODO
-    // 1. 来自其他无人机 的 目标位置信息
-
-    // 2. 来自本机的 目标位置信息
-
-	// tracker_load_param();
-}
-
 
 
 
@@ -220,219 +188,9 @@ void Mav_Mission::track_pidVelocityControl()
 
 }
 
-//-------------------------------------------------
-// fast part
-//-------------------------------------------------
-void fast_init()
-{
-	// --------------------------------------------------------------------------------------------------------------
-    // 避障飞行 (TODO)
-    // 发送给 fast_plan 的消息
-
-    // 接收 fast_plan 的信息
-    // fast plan
-    //### fast_sub = nh.subscribe<mav_mission::PositionCommand>("/planning/pos_cmd", 1, fast_sub_cb );
-
-}
-
-
-// 回调函数
-// 避障函数 fast 
-void Mav_Mission::fast_sub_cb(const mav_mission::PositionCommand::ConstPtr &msg)
-{
-    mav_mission::PositionCommand cmd;
-    cmd = *msg;
-    
-    Mission_pose_current.position.x = cmd.position.x;
-    Mission_pose_current.position.y = cmd.position.y;
-    Mission_pose_current.position.z = cmd.position.z;
-    Mission_pose_current.orientation.w = cmd.yaw;
-}
-
-
-// fast_sub = nh.subscribe<quadrotor_msgs::PositionCommand>("/planning/pos_cmd", 1, &uavControl::fast_sub_cb,this);
 
 
 
-
-
-//-------------------------------------------------
-// formation part
-//-------------------------------------------------
-
-void Mav_Mission::formation_init()
-{
-    // --------------------------------------------------------------------------------------------------------------
-    // 编队控制
-    // 接收 其他无人机的位置信息 编队飞行
-    //### ot_loc_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/loc_pos_enu", 10, ot_loc_pos_enu_cb );
-    // 无人机 ENU 航点Pos(flag=1) 编队误差设计(flag=2) 
-    //### set_local_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, set_local_pos_enu_cb );
-    // 无人机编队偏差反馈 (flag=3)
-    set_local_pos_enu_pub = nh.advertise<mavcomm_msgs::local_pos_enu>("/mavcomm/send/set_loc_pos_enu", 1); // 告知地面站 无人机编队误差设置
-
-}
-
-// 回调函数
-// 编队飞行
-// /mavcomm/receive/loc_pos_enu
-void Mav_Mission::ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
-{
-    int num;
-
-    msg_ot_local_pos_enu = *msg;
-
-    num = (int) msg_ot_local_pos_enu.sysid;   // 发送端无人机编号
-    flag_ot_num[num] = 1;                     // 以后归    flag
-    ot_pos_x[num] = (double) msg_ot_local_pos_enu.x; 
-    ot_pos_y[num] = (double) msg_ot_local_pos_enu.y;
-    ot_pos_z[num] = (double) msg_ot_local_pos_enu.z;
-    ot_pos_yaw[num] = (double) msg_ot_local_pos_enu.yaw;
-}
-
-void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
-{
-    msg_local_pos_enu = *msg;
-
-    if (msg_local_pos_enu.flag == 1)
-    {   //  设置飞机目标位置
-        Mission_pose_current.position.x = (double) msg_local_pos_enu.x; 
-        Mission_pose_current.position.y = (double) msg_local_pos_enu.y;
-        Mission_pose_current.position.z = (double) msg_local_pos_enu.z;
-        Mission_pose_current.orientation.w = (double) msg_local_pos_enu.yaw;
-
-        ROS_INFO_STREAM( " Set target Pos to [" << Mission_pose_current.position.x << ", " << 
-        Mission_pose_current.position.y << ", " << Mission_pose_current.position.z << ", " << 
-        Mission_pose_current.orientation.w / PI_3 * 180.0 << "]");
-    }
-    else if (msg_local_pos_enu.flag == 2)
-    {   //  设置飞机编队偏差
-        ot_offset_x = msg_local_pos_enu.x; 
-        ot_offset_y = msg_local_pos_enu.y; 
-        ot_offset_z = msg_local_pos_enu.z; 
-        ot_offset_yaw = msg_local_pos_enu.yaw; 
-
-        ROS_INFO_STREAM( " Set ot_offset_xy [" << ot_offset_x << ", " << ot_offset_y << 
-        ", " << ot_offset_z << "," << ot_offset_yaw / PI_3 * 180 << "]");
-
-        msg_local_pos_enu.header.stamp = ros::Time::now();
-        msg_local_pos_enu.flag = msg_local_pos_enu.sysid;
-        msg_local_pos_enu.sysid = msg_local_pos_enu.compid;
-        msg_local_pos_enu.compid = msg_local_pos_enu.flag;
-        msg_local_pos_enu.flag = 3;
-
-        // flag 置3 反馈给地面站 确认已设置
-        set_local_pos_enu_pub.publish(msg_local_pos_enu);
-    }
-}
-
-// 分布式 编队控制算法
-void Mav_Mission::formation_pidVelocityControl()
-{
-    // 直接给速度指令
-
-    // Init
-    for (int i=0; i<3; i++)
-    {    delta_pos[i] = 0;
-    }
-    delta_yaw = 0;
-
-    float num_count;
-    num_count = 0.0;
-
-    for (int i = 1; i<NNN; i++)
-    { 
-        if (flag_ot_num[i]==1 )
-        {
-            num_count = num_count + 1;
-            delta_pos[0] = delta_pos[0] + ot_pos_x[i];
-            delta_pos[1] = delta_pos[1] + ot_pos_y[i];
-            // std::cout << "i=" << i << ", num_count=" << num_count;
-            // std::cout << "ot_pos_x[i]=" << ot_pos_x[i] << ", ot_pos_y[i]=" << ot_pos_y[i] << std::endl;
-        }
-    }
-    
-    // u_i = - sum[ z_i -z_j - (delta_i - delta_j) ]
-    if (num_count == 0.0)
-    {   // num_count == 0 怎么办 
-        // 保持不动
-        delta_pos[0] = 0.0;     // Mission_pose_current.position.x - currentPose.position.x;
-        delta_pos[1] = 0.0;     // Mission_pose_current.position.y - currentPose.position.y;
-    }
-    else
-    {
-        delta_pos[0] = delta_pos[0]/num_count - currentPose.position.x + ot_offset_x; 
-        delta_pos[1] = delta_pos[1]/num_count - currentPose.position.y + ot_offset_y; 
-    }
-
-    delta_pos[2] = Mission_pose_current.position.z - currentPose.position.z;
-    
-    msg_ctrl_set_vel.twist.linear.x = pid_x.p * delta_pos[0] + pid_x.d * (0 - currentVelocity.twist.linear.x);
-    msg_ctrl_set_vel.twist.linear.y = pid_y.p * delta_pos[1] + pid_y.d * (0 - currentVelocity.twist.linear.y);
-    msg_ctrl_set_vel.twist.linear.z = pid_z.p * delta_pos[2] + pid_z.d * (0 - currentVelocity.twist.linear.z);
-
-    tf::Quaternion quat;
-    tf::quaternionMsgToTF(currentPose.orientation, quat);
-    double roll, pitch, yaw;
-    tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);//进行转换
-
-    double target_yaw = Mission_pose_current.orientation.w;
-    delta_yaw = target_yaw - yaw;
-
-    if ( abs(delta_yaw) > PI_3 ) 
-    {
-        if(delta_yaw > 0)
-            delta_yaw = delta_yaw - 2 * PI_3;  
-        else
-            delta_yaw = delta_yaw + 2 * PI_3;          
-    }
-    
-    msg_ctrl_set_vel.twist.angular.z = pid_yaw.p * delta_yaw + pid_yaw.i * delta_yaw_add + pid_yaw.d * (0 - currentVelocity.twist.angular.z);
-    delta_yaw_add = delta_yaw_add + delta_yaw;  
-    //限制幅值
-    msg_ctrl_set_vel.twist.linear.x = satfunc(msg_ctrl_set_vel.twist.linear.x , maxVelocity_x);
-    msg_ctrl_set_vel.twist.linear.y = satfunc(msg_ctrl_set_vel.twist.linear.y , maxVelocity_y);
-    msg_ctrl_set_vel.twist.linear.z = satfunc(msg_ctrl_set_vel.twist.linear.z , maxVelocity_z);
-    msg_ctrl_set_vel.twist.angular.z = satfunc(msg_ctrl_set_vel.twist.angular.z , maxVelocity_yaw);
-
-    pub_ctrl_set_vel.publish(msg_ctrl_set_vel);
-
-}
-
-
-
-//-------------------------------------------------
-// mission part
-//-------------------------------------------------
-
-void Mav_Mission::mission_init()
-{
-	// mavcomm mission 模块
-    // TODO 逻辑梳理 + 优化
-    // 订阅 任务指令
-    // 接收 任务设置...
-    
-	//### mission_info_sub = nh.subscribe<mavcomm_msgs::mission_info>("/mavcomm/receive/mission_info", 10, mission_info_cb );
-    // 发送 任务设置反馈
-    mission_back_info_pub = nh.advertise<mavcomm_msgs::mission_back_info>
-        ("/mavcomm/send/mission_back_info", 1);
-    
-    // 接收 获取具体的每一条任务...
-    mission_info_sub = nh.subscribe<mavcomm_msgs::mission_set>
-        ("/mavcomm/receive/mission_set", 10, &Mav_Mission::mission_set_cb, this );
-}
-
-// 回调函数     mission
-
-// 无人机任务 mission
-// mission 考虑整体系统 的 联系性
-// 任务开始前 所有无人机设置统一的整体任务
-
-// 无人机 任务 设置
-void Mav_Mission::mission_set_cb(const mavcomm_msgs::mission_set::ConstPtr& msg)
-{
-    _task_part.task_mission_set(msg);
-}
 
 
 /*
@@ -450,9 +208,8 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
     switch (msg_mission_info.flag)
     {
         case 1: // 任务设置 初始化
-            mis_total = (int) msg_mission_info.mission_num;
-            
-            
+
+            Task_part::mission_settings_init(msg)
 
             // 回应信号
             // mission_back_info
