@@ -62,7 +62,7 @@ void Task_part::task_init()
 }
 
 //-------------------------------------------------
-// 回调函数
+// Func                     任务设置-mission_info_cb
 //-------------------------------------------------
 void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
 {
@@ -77,45 +77,23 @@ void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
         case 1: // 任务设置 初始化
 
             mission_settings_init(msg);
-            break;
+        break;
 
         case 2: // 任务设置完成进行 校验
 
             mission_setting_check();
 
-            break;
+        break;
 
+        case 3: // 读取&保存任务
 
+            mission_setting_check();
+
+        break;
+        
     }
 
 }
-
-void Task_part::mission_set_cb(const mavcomm_msgs::mission_set::ConstPtr &msg)
-{
-
-}
-
-// uav -> gcs   任务设置 回应 
-void Task_part::mission_settings_back_info(mavcomm_msgs::mission_back_info msg)
-{
-    // 回应信号
-    msg_mission_back_info.flag = msg.flag;
-    msg_mission_back_info.mission_num = msg.mission_num;
-    msg_mission_back_info.param1 = msg.param1;
-    msg_mission_back_info.param2 = msg.param2;
-    // 发送&接收 ID 
-    msg_mission_back_info.sysid = msg.sysid;
-    msg_mission_back_info.compid = msg.compid;
-
-    // 
-    msg_mission_back_info.header.seq++;
-    msg_mission_back_info.header.stamp = ros::Time::now(); 
-    mission_back_info_pub.publish(msg_mission_back_info);
-}
-
-//-------------------------------------------------
-// Func                     任务设置-mission_info_cb
-//-------------------------------------------------
 
 // gcs -> uav   flag==1    |任务初始化   |需要回应 
 // mavcomm_msgs::mission_info   .flag=1 
@@ -154,13 +132,117 @@ void Task_part::mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr
 // mavcomm_msgs::mission_info   .flag=2 
 void Task_part::mission_setting_check()
 {
+    if ( (mis_total == (int) msg_mission_info.mission_num ) &&
+                 (mis_save_param[0] == msg_mission_info.param1) &&
+                 (mis_save_param[1] == msg_mission_info.param2) )
+            {   // 任务总数 & param参数 对
+
+                // 遍历所有的 mis_array[i].flag_set == 1;
+                // 接收的任务总数是否完整
+                flag_incomplete_task_num = 0;
+                incomplete_task_array_total = 0;
+
+                for (int i=0; i<mis_total; i++)
+                {   
+                    // 寻找未设置的任务
+                    if ( mis_array[i].flag_set == 0 )
+                    {
+                        incomplete_task_array[incomplete_task_array_total] = i;
+                        flag_incomplete_task_num = 1;
+                        incomplete_task_array_total++;
+                    }
+                }
+                // 遍历完
+                if ( flag_incomplete_task_num )
+                {
+                    // 如果任务数据不完整
+                    // 进入 设置模式 ( 固定频率回传无人机的代码 )
+                    // 
+
+                    // break;
+                }
+
+                // 设置 last_uav_mis_no & next_uav_mis_no
+
+                for (int i=0; i<mis_total; i++)
+                {   
+                    // 寻找本机的任务
+                    if ( mis_array[i].flag_this_uav == 1 )
+                    {
+
+
+                    }
+                }
+                // mis_array[i].last_uav_mis_no = 0;
+                // mis_array[i].next_uav_mis_no = 0;
+
+                // 标志位设置
+                flag_mission_set = 3;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
+                flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
+
+                // 回应信号
+                // mission_back_info
+                // 正确
+                msg_mission_back_info.sysid = my_id;
+                msg_mission_back_info.compid = ID_GCS;
+
+                msg_mission_back_info.flag = 2;
+                msg_mission_back_info.mission_num = 3;
+                msg_mission_back_info.param1 = 3;
+                msg_mission_back_info.param2 = 3;
+                mission_back_info_pub.publish(msg_mission_back_info);
+
+            } else
+            {
+                // 标志位设置
+                flag_mission_set = 4;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
+                flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
+
+                // 回应信号
+                // mission_back_info
+                // 错误2 任务校验不一致 无人机和地面站的任务不一致
+                msg_mission_back_info.sysid = my_id;
+                msg_mission_back_info.compid = ID_GCS;
+
+                msg_mission_back_info.flag = 2;
+                msg_mission_back_info.mission_num = 4;
+                msg_mission_back_info.param1 = 4;
+                msg_mission_back_info.param2 = 4;
+                mission_back_info_pub.publish(msg_mission_back_info);
+            }
 
 }
 
+//-------------------------------------------------
+// Func                  务设置反馈-mission_back_info
+//-------------------------------------------------
+
+// uav -> gcs   任务设置 回应 
+void Task_part::mission_settings_back_info(mavcomm_msgs::mission_back_info msg)
+{
+    // 回应信号
+    msg_mission_back_info.flag = msg.flag;
+    msg_mission_back_info.mission_num = msg.mission_num;
+    msg_mission_back_info.param1 = msg.param1;
+    msg_mission_back_info.param2 = msg.param2;
+    // 发送&接收 ID 
+    msg_mission_back_info.sysid = msg.sysid;
+    msg_mission_back_info.compid = msg.compid;
+
+    // 
+    msg_mission_back_info.header.seq++;
+    msg_mission_back_info.header.stamp = ros::Time::now(); 
+    mission_back_info_pub.publish(msg_mission_back_info);
+}
 
 //-------------------------------------------------
 // Func                   任务设置 每一条-mission_set
 //-------------------------------------------------
+
+void Task_part::mission_set_cb(const mavcomm_msgs::mission_set::ConstPtr &msg)
+{
+    task_mission_set(msg);
+}
 
 // gcs -> uav   任务设置 每一条
 void Task_part::task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg)

@@ -82,6 +82,9 @@ public:
     // mavcomm_msgs::mission_info   .flag=1 
     void mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr& msg);
 
+    // gcs -> uav   flag==2    |任务设置完成进行 校验  |需要回应 
+    // mavcomm_msgs::mission_info   .flag=2 
+    void mission_setting_check();
 
 //-------------------------------------------------
 //                     任务设置反馈-mission_back_info
@@ -108,7 +111,6 @@ public:
 
 private:
 
-    void mission_setting_check();
 
     // TBC
     // Mission 状态机
