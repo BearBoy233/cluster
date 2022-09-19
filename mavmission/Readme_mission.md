@@ -1,6 +1,4 @@
-000# 任务模块
-
-# mav_mission
+# 任务模块 / mav_mission
 
 ### 概述
 
@@ -9,6 +7,7 @@
 ```
     主模块&调度
 ```
+
 - 功能模块
 
 [任务模块/taskpart](#task-part-模块) 
@@ -17,6 +16,13 @@
 
 ---
 #### task-part 模块
+
+[参考/mavlink-services-mission](https://mavlink.io/en/services/mission.html)
+
+- diff
+
+  一对一的设置模式 => 一对多设置 (增加效率)
+
 
 - 主要功能
 
@@ -62,6 +68,59 @@ stateDiagram-v2
 
 ```
 
+- **上传任务到无人机**
+
+```Mermaid
+
+sequenceDiagram
+
+participant gcs
+participant uav1
+participant uavN
+
+gcs ->> uav1 : mission_info (flag=1)
+gcs ->> uavN : 
+
+gcs ->> gcs : start timeout
+
+uav1 -->> uav1 : flag=SET
+uavN -->> uavN : flag=SET
+
+uav1 -->> gcs : B
+uavN -->> gcs : B
+
+gcs ->> uav1 : C(0)
+gcs ->> uavN : 
+
+Note over gcs, uavN: ... 遍历发送 ...
+
+gcs ->> uav1: C(N)
+gcs ->> uavN: 
+
+loop 遍历校验
+
+    gcs->>uav1 : D
+
+    uav1 -->> gcs : E(?)
+
+    gcs ->> uav1 : C(?)
+    gcs ->> uavN : 
+
+    Note over gcs, uav1: ... 遍历发送 ...
+
+    uav1 -->> gcs : E(?+1)
+
+    gcs ->> uav1 : C(?+1)
+    gcs ->> uavN : 
+
+    uav1 -->> gcs : F
+
+end
+
+
+```
+
+
 ### [TBC] mission 模块
 
 `node_state`各状态的切换逻辑
@@ -94,7 +153,6 @@ LANDED --> IDLE : disarm()
 note left of [*] : /mavcomm/receive/changestate 实现切换
 
 ```
-
 
 
 
