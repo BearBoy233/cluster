@@ -1,7 +1,7 @@
 // 集群任务的管理
 
 // 任务的 设置、校验、保存、读取
- 
+  
 // #pragma once
 // #ifndef 
 
@@ -12,6 +12,43 @@
 #include <mavcomm_msgs/mission_info.h>
 #include <mavcomm_msgs/mission_back_info.h>
 #include <mavcomm_msgs/mission_set.h>
+
+// TBC
+// mision_info.msg
+enum MISSION_INFO {
+    MISSION_INFO_NAN = 0,
+    MISSION_INFO_SET_INIT,
+    MISSION_INFO_CHECK,
+    MISSION_INFO_LOAD,
+    MISSION_INFO_SAVE,
+    MISSION_INFO_DEL,
+};
+
+// TBC
+// mission_back_info.msg
+enum STATE_MISSION {
+    MISSION_STATE_NAN = 0,
+
+    MISSION_STATE_SETTING,
+
+    MISSION_STATE_LOADING,
+    MISSION_STATE_LOADED,
+    MISSION_STATE_LOAD_FAIL,
+
+    MISSION_STATE_CHECKING,
+    MISSION_STATE_CHECKED,
+    
+    MISSION_STATE_CHECK_FAIL_LEN,
+    MISSION_STATE_CHECK_FAIL_CRC,
+    MISSION_STATE_CHECK_FAIL_INCOMPLETE,
+
+    MISSION_STATE_SAVED,
+    MISSION_STATE_SAVE_FAIL,
+
+    MISSION_STATE_EXECUTING,
+    MISSION_STATE_PAUSED,
+    MISSION_STATE_FINISHED,
+};
 
 namespace mav_mission {
 
@@ -24,6 +61,17 @@ public:
 private:
     // 用于 订阅 发布 param读取
     ros::NodeHandle tp_nh;
+
+    // mission part
+    enum STATE_MISSION current_mission_state; // 当前的任务状态
+
+    // TBD
+    // TODO 改成 枚举类型
+    int flag_mission_set = 0;           // 任务设置状态  // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
+
+    int flag_mission_start = 0;         // 任务执行状态    0-未开始 1-任务运行 2-暂停
+    int flag_mission_sync = 0;          // 任务同步标志    1-顺序执行 2-同步执行
+    int flag_mission_pause_task = 0;    // 任务暂停       1暂停&悬停 /2暂停&原地降落 /3暂停&起飞位置降落
 
     // param 参数读取 
 		
@@ -41,28 +89,14 @@ private:
     struct MIS {
         mavcomm_msgs::mission_set msg_mission_set;
         bool flag_set;          // 是否设置了任务
-
         bool flag_this_uav;     // 是否为本机的任务
+        
         int last_uav_mis_no;    // 上一个 与本机有关的任务 编号
         int next_uav_mis_no;    // 下一个 与本机有关的任务 编号
-    } mis_array[MAX_NUM_MIS];               // 保存的详细任务
+    } mis_array[MAX_NUM_MIS];   // 保存的详细任务
 
     // 注意! 只有在 保存&读取 本地的任务文件时 使用，减少数据的传输
     uint8_t mis_save_param[2];      // 当前执行任务 用于快速校验 参数
-
-    
-    // flag 标志位
-    bool flag_incomplete_task_num = 0;     // 判断接收&读取的任务是否完整
-    int incomplete_task_array_total;
-    uint8_t incomplete_task_array[MAX_NUM_MIS];
-
-    // mission part
-    // TODO 改成 枚举类型
-    int flag_mission_set = 0;           // 任务设置状态  // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
-
-    int flag_mission_start = 0;         // 任务执行状态    0-未开始 1-任务运行 2-暂停
-    int flag_mission_sync = 0;          // 任务同步标志    1-顺序执行 2-同步执行
-    int flag_mission_pause_task = 0;    // 任务暂停       1暂停&悬停 /2暂停&原地降落 /3暂停&起飞位置降落
 
     // temp_data
     mavcomm_msgs::mission_info msg_temp_mission_info;
@@ -84,7 +118,7 @@ public:
 
     // gcs -> uav   flag==2    |任务设置完成进行 校验  |需要回应 
     // mavcomm_msgs::mission_info   .flag=2 
-    void mission_setting_check();
+    void mission_setting_check(const mavcomm_msgs::mission_info::ConstPtr& msg);
 
 //-------------------------------------------------
 //                     任务设置反馈-mission_back_info
@@ -93,7 +127,10 @@ public:
     ros::Publisher mission_back_info_pub;
     mavcomm_msgs::mission_back_info msg_mission_back_info;
 
-    // uav -> gcs   任务设置 回应
+    // uav -> gcs   任务设置 回应  [由 flag 决定返回信息]
+    void mission_F_settings_back_info(int flag_state, int param1 = 0);
+
+    // uav -> gcs   任务设置 回应 [常规-msg]
     void mission_settings_back_info(mavcomm_msgs::mission_back_info msg);
 
 
@@ -108,27 +145,6 @@ public:
     // 任务 输入
     void task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg);
  
-
-private:
-
-
-    // TBC
-    // Mission 状态机
-    // TODO  Mission 状态机   -----------------------------------
-    enum MissionState {     // ???
-        UNINIT,                   // 未知状态
-        IDLE,                     // 什么都不干 地面待机状态
-        TAKING_OFF,               // 当前 loc 点起飞
-        LANDING,                  // 当前 loc 点降落
-        POS_EXECUTION,            // 位置控制
-        FORMATION_FLY,            // 编队飞行 
-        TRACK,                    // 目标追踪 KCF_tracker
-        Avoidance,                // 避障 调用 Fast planner
-        WAITING_FOR_HOME_POSE,    // 此和下面的状态 无法通过地面站切换到
-        TAKEOFF_FAIL,
-        LANDED,
-    } mission_state, mission_state_last;  //状态机 当前状态 & 上一个状态
-
-    
+   
 };
 }

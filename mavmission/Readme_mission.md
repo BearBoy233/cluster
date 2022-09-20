@@ -68,7 +68,7 @@ stateDiagram-v2
 
 ```
 
-- **上传任务到无人机**
+- **上传任务到无人机&校验**
 
 ```Mermaid
 
@@ -78,44 +78,46 @@ participant gcs
 participant uav1
 participant uavN
 
+Note over gcs, uavN : 发送初始化
+
 gcs ->> uav1 : mission_info (flag=1)
 gcs ->> uavN : 
 
-gcs ->> gcs : start timeout
+gcs -->> gcs : start timeout [TODO-Auto]
+uav1 -->> uav1 : current_mission_state=MISSION_SETTING
+uavN -->> uavN : current_mission_state=MISSION_SETTING
 
-uav1 -->> uav1 : flag=SET
-uavN -->> uavN : flag=SET
+uav1 -->> gcs : mission_back_info(flag=MISSION_SETTING)
+uavN -->> gcs : 
 
-uav1 -->> gcs : B
-uavN -->> gcs : B
 
-gcs ->> uav1 : C(0)
+Note over gcs, uavN : 遍历发送 mission_set
+
+gcs ->> uav1 : mission_set(0)
+gcs ->> uavN : 
+Note over gcs : mission_set [0，M)
+gcs ->> uav1 : mission_set(M)
 gcs ->> uavN : 
 
-Note over gcs, uavN: ... 遍历发送 ...
 
-gcs ->> uav1: C(N)
-gcs ->> uavN: 
+Note over gcs, uavN : 校验
 
 loop 遍历校验
-
-    gcs->>uav1 : D
-
-    uav1 -->> gcs : E(?)
-
-    gcs ->> uav1 : C(?)
-    gcs ->> uavN : 
-
-    Note over gcs, uav1: ... 遍历发送 ...
-
-    uav1 -->> gcs : E(?+1)
-
-    gcs ->> uav1 : C(?+1)
-    gcs ->> uavN : 
-
-    uav1 -->> gcs : F
-
+    gcs->>uav1 : mission_info (flag=2)
+    gcs->>uavN : 
+    Note over uav1, uavN : 遍历mis_array
+    
+    Note over uav1 : 缺少mission_set(?)
+    uav1 -->> uav1 : current_mission_state=MISSION_CHECK_FAIL_INCOMPLETE
+    uav1 -->> gcs : mission_back_info(flag=MISSION_CHECK_FAIL_INCOMPLETE)[param=?]
+    gcs ->> uav1 : mission_set(?)
+    
+    Note over uavN : 完整mission_set
+    uavN -->> uavN : current_mission_state=MISSION_CHECKED
+    uavN -->> gcs : mission_back_info(flag=MISSION_CHECKED)
 end
+
+
 
 
 ```
