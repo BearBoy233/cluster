@@ -23,6 +23,7 @@
 
 #include <ros/ros.h>
 #include <iostream>
+#include <cJSON.h>
 
 
 #endif

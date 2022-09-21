@@ -1,13 +1,14 @@
 
 #include <task_part.h>
-
+ 
 using namespace mav_mission;
 
 //-------------------------------------------------
 // Init 初始化
 //-------------------------------------------------
 Task_part::Task_part():
-    tp_nh("~tp")        // /uav_mission/tp/xxx
+    tp_nh("~"),             // param    /uav_mission/xxx
+    mavcomm_nh("mavcomm")   // mavcomm  /mavcomm/XXX   pub&sub
 {   
     // 数值 初始化
     task_init();
@@ -15,23 +16,32 @@ Task_part::Task_part():
     current_mission_state = MISSION_STATE_NAN;
 
     // load param
-    // TBC
     tp_nh.param<int>("my_id", my_id, 100);
-	std::cout << "tp/uav_mission/my_id = " << my_id << std::endl;
+    // file_storage_path_head = XXX/src/cluster/mavcomm
+    tp_nh.param<std::string>("file_storage_path_head", file_storage_path_head, "nan");
+    if (file_storage_path_head != "nan")
+    {
+        std::string str_temp;
+        str_temp = "/../mavmission/data";
+        file_storage_path_head = file_storage_path_head + str_temp;
+    }
+
+    std::cout << "file_storage_path_head = " << file_storage_path_head << std::endl;
+    std::cout << "uav_mission/my_id = " << my_id << std::endl;
 
     // 话题订阅     | gcs -> uav
-	mission_info_sub = tp_nh.subscribe<mavcomm_msgs::mission_info>
-        ("/mavcomm/receive/mission_info", 10, &Task_part::mission_info_cb, this );
+	mission_info_sub = mavcomm_nh.subscribe<mavcomm_msgs::mission_info>
+        ("receive/mission_info", 10, &Task_part::mission_info_cb, this );
     
     // 话题订阅     | gcs -> uav
     // 接收 获取具体的每一条任务
-    mission_set_sub = tp_nh.subscribe<mavcomm_msgs::mission_set>
-        ("/mavcomm/receive/mission_set", 10, &Task_part::mission_set_cb, this );
+    mission_set_sub = mavcomm_nh.subscribe<mavcomm_msgs::mission_set>
+        ("receive/mission_set", 10, &Task_part::mission_set_cb, this );
 
     // 发送         | uav -> gcs
     // 任务设置反馈
-    mission_back_info_pub = tp_nh.advertise<mavcomm_msgs::mission_back_info>
-        ("/mavcomm/send/mission_back_info", 1);
+    mission_back_info_pub = mavcomm_nh.advertise<mavcomm_msgs::mission_back_info>
+        ("send/mission_back_info", 1);
 
 }
 
@@ -67,7 +77,7 @@ void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
     // 不区分 system_id  companion_id
     int t_no = msg_temp_mission_info.flag;
 
-    // TODO 改成 枚举类型
+    // enum MISSION_INFO
     switch (t_no)
     {
         case MISSION_INFO_SET_INIT: // 任务设置 初始化
@@ -83,24 +93,25 @@ void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
                 current_mission_state = MISSION_STATE_CHECKING;
                 mission_setting_check(msg);
             }
+            // 校验完了-不反馈了
 
         break;
 
-        case MISSION_INFO_LOAD: // 读取
+        case MISSION_INFO_LOAD: // 读取本地存档
 
-            // mission_setting_check();
-
-        break;
-
-        case MISSION_INFO_SAVE: // 保存
-
-            // mission_setting_check();
+            mission_setting_load(msg);
 
         break;
 
-        case MISSION_INFO_DEL: // 删除
+        case MISSION_INFO_SAVE: // 保存到本地存档
 
-            // mission_setting_check();
+            mission_setting_save(msg);
+
+        break;
+
+        case MISSION_INFO_DEL: // 删除本地存档
+
+            mission_setting_del(msg);
 
         break;
     }
@@ -133,7 +144,8 @@ void Task_part::mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr
 
 // gcs -> uav   flag==2    |任务设置完成进行 校验  |需要回应 
 // mavcomm_msgs::mission_info   .flag=2 
-void Task_part::mission_setting_check(const mavcomm_msgs::mission_info::ConstPtr& msg)
+void Task_part::mission_setting_check
+    (const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
     // 校验 长度
     if ( mis_total != msg->mission_num )
@@ -203,6 +215,37 @@ void Task_part::mission_setting_check(const mavcomm_msgs::mission_info::ConstPtr
     // 告知 gcs
     mission_F_settings_back_info( current_mission_state );
 }
+
+
+// gcs -> uav   |读取本地任务   |需要回应 
+// mavcomm_msgs::mission_info   .flag=MISSION_INFO_LOAD 
+void Task_part::mission_setting_load
+    (const mavcomm_msgs::mission_info::ConstPtr& msg)
+{
+
+}
+
+// gcs -> uav   |读取本地任务   |需要回应 
+// mavcomm_msgs::mission_info   .flag=MISSION_INFO_SAVE 
+void Task_part::mission_setting_save
+    (const mavcomm_msgs::mission_info::ConstPtr& msg)
+{
+
+}
+
+// gcs -> uav   |读取本地任务   |需要回应 
+// mavcomm_msgs::mission_info   .flag=MISSION_INFO_DEL 
+void Task_part::mission_setting_del
+    (const mavcomm_msgs::mission_info::ConstPtr& msg)
+{
+
+}
+
+
+
+
+
+
 
 //-------------------------------------------------
 // Func                  任务设置反馈-mission_back_info

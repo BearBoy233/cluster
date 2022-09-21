@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10.2)
 project(mavcomm)
 
 add_compile_options(-std=c++11)
@@ -19,15 +19,15 @@ find_package(catkin REQUIRED COMPONENTS
   mavcomm_msgs
 )
 
-generate_messages(
-  DEPENDENCIES
-  std_msgs
+#generate_messages(
+#  DEPENDENCIES
+#  std_msgs
 #  nav_msgs
-  geometry_msgs
-  mavros_msgs
+#  geometry_msgs
+#  mavros_msgs
     
-  mavcomm_msgs
-)
+#  mavcomm_msgs
+#)
 
 catkin_package(
   INCLUDE_DIRS include

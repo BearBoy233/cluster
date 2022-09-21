@@ -1,5 +1,5 @@
 # cmake_minimum_required(VERSION 2.8.3)
-cmake_minimum_required(VERSION 3.1.2)
+cmake_minimum_required(VERSION 3.10.2)
 project(mavcomm_msgs)
 
 find_package(catkin REQUIRED COMPONENTS geographic_msgs geometry_msgs message_generation sensor_msgs std_msgs)

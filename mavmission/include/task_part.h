@@ -42,8 +42,13 @@ enum STATE_MISSION {
     MISSION_STATE_CHECK_FAIL_CRC,
     MISSION_STATE_CHECK_FAIL_INCOMPLETE,
 
+    MISSION_STATE_SAVING,
     MISSION_STATE_SAVED,
     MISSION_STATE_SAVE_FAIL,
+
+    MISSION_STATE_DELING,
+    MISSION_STATE_DELED,
+    MISSION_STATE_DEL_FAIL,
 
     MISSION_STATE_EXECUTING,
     MISSION_STATE_PAUSED,
@@ -61,6 +66,8 @@ public:
 private:
     // 用于 订阅 发布 param读取
     ros::NodeHandle tp_nh;
+    // mavcomm (pub/sub)
+    ros::NodeHandle mavcomm_nh;
 
     // mission part
     enum STATE_MISSION current_mission_state; // 当前的任务状态
@@ -77,6 +84,11 @@ private:
 		
     // my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
     int my_id;
+
+    std::string file_storage_path_head;
+    std::string file_storage_path;
+
+    // pa
 
 private:
     // 数值 初始化
@@ -112,13 +124,26 @@ public:
     void mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg);
     mavcomm_msgs::mission_info msg_mission_info;
     
-    // gcs -> uav   flag==1    |任务初始化   |需要回应 
-    // mavcomm_msgs::mission_info   .flag=1 
+    // gcs -> uav   |任务初始化   |需要回应 
+    // mavcomm_msgs::mission_info   .flag==MISSION_INFO_SET_INIT
     void mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr& msg);
 
-    // gcs -> uav   flag==2    |任务设置完成进行 校验  |需要回应 
-    // mavcomm_msgs::mission_info   .flag=2 
+    // gcs -> uav   |任务设置完成进行 校验  |需要回应 
+    // mavcomm_msgs::mission_info   .flag=MISSION_INFO_CHECK 
     void mission_setting_check(const mavcomm_msgs::mission_info::ConstPtr& msg);
+
+    // gcs -> uav   |读取本地任务   |需要回应 
+    // mavcomm_msgs::mission_info   .flag=MISSION_INFO_LOAD 
+    void mission_setting_load(const mavcomm_msgs::mission_info::ConstPtr& msg);
+
+    // gcs -> uav   |读取本地任务   |需要回应 
+    // mavcomm_msgs::mission_info   .flag=MISSION_INFO_SAVE 
+    void mission_setting_save(const mavcomm_msgs::mission_info::ConstPtr& msg);
+
+    // gcs -> uav   |读取本地任务   |需要回应 
+    // mavcomm_msgs::mission_info   .flag=MISSION_INFO_DEL 
+    void mission_setting_del(const mavcomm_msgs::mission_info::ConstPtr& msg);
+
 
 //-------------------------------------------------
 //                     任务设置反馈-mission_back_info

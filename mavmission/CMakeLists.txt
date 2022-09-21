@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10.2)
 project(mav_mission)
 
 add_compile_options(-std=c++11)
@@ -54,6 +54,7 @@ include_directories(
 add_library(mission
   src/mission.cpp
   src/task_part.cpp
+  src/cJSON.cpp
 )
 add_dependencies(mission
   ${catkin_EXPORTED_TARGETS}
