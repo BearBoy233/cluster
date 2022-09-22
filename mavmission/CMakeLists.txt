@@ -54,7 +54,7 @@ include_directories(
 add_library(mission
   src/mission.cpp
   src/task_part.cpp
-  src/cJSON.cpp
+  # src/cJSON.cpp 
 )
 add_dependencies(mission
   ${catkin_EXPORTED_TARGETS}

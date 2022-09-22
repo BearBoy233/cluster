@@ -1,7 +1,7 @@
 // 集群任务的管理
 
 // 任务的 设置、校验、保存、读取
-  
+
 // #pragma once
 // #ifndef 
 
@@ -13,6 +13,8 @@
 #include <mavcomm_msgs/mission_back_info.h>
 #include <mavcomm_msgs/mission_set.h>
 
+using json = nlohmann::json;
+
 // TBC
 // mision_info.msg
 enum MISSION_INFO {
@@ -21,7 +23,6 @@ enum MISSION_INFO {
     MISSION_INFO_CHECK,
     MISSION_INFO_LOAD,
     MISSION_INFO_SAVE,
-    MISSION_INFO_DEL,
 };
 
 // TBC
@@ -45,14 +46,6 @@ enum STATE_MISSION {
     MISSION_STATE_SAVING,
     MISSION_STATE_SAVED,
     MISSION_STATE_SAVE_FAIL,
-
-    MISSION_STATE_DELING,
-    MISSION_STATE_DELED,
-    MISSION_STATE_DEL_FAIL,
-
-    MISSION_STATE_EXECUTING,
-    MISSION_STATE_PAUSED,
-    MISSION_STATE_FINISHED,
 };
 
 namespace mav_mission {
@@ -87,8 +80,16 @@ private:
 
     std::string file_storage_path_head;
     std::string file_storage_path;
+    char file_storage_path_cstr[200];
+    // strcpy(file_storage_path_cstr, file_storage_path.c_str());
 
-    // pa
+    // nljson
+    // int nljson_file_save(std::string path, int num=2); //保存
+    int nljson_file_save(char *path, int num=2); //保存
+
+    // int nljson_file_load(std::string path, int num=2); //读取
+    int nljson_file_load(char *path, int num=2); //读取
+
 
 private:
     // 数值 初始化
@@ -140,11 +141,6 @@ public:
     // mavcomm_msgs::mission_info   .flag=MISSION_INFO_SAVE 
     void mission_setting_save(const mavcomm_msgs::mission_info::ConstPtr& msg);
 
-    // gcs -> uav   |读取本地任务   |需要回应 
-    // mavcomm_msgs::mission_info   .flag=MISSION_INFO_DEL 
-    void mission_setting_del(const mavcomm_msgs::mission_info::ConstPtr& msg);
-
-
 //-------------------------------------------------
 //                     任务设置反馈-mission_back_info
 //-------------------------------------------------
@@ -169,7 +165,6 @@ public:
     // gcs -> uav   任务设置 每一条
     // 任务 输入
     void task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg);
- 
-   
+
 };
 }

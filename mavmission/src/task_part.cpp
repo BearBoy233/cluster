@@ -43,6 +43,17 @@ Task_part::Task_part():
     mission_back_info_pub = mavcomm_nh.advertise<mavcomm_msgs::mission_back_info>
         ("send/mission_back_info", 1);
 
+    // TBD
+    // TEST
+    mis_total = 1;
+    file_storage_path = file_storage_path_head + std::string("task_")
+        + std::to_string(mis_total) + std::string(".json");
+    strcpy(file_storage_path_cstr, file_storage_path.c_str());
+        
+    // json 保存
+    int back_i;
+    back_i = nljson_file_save(file_storage_path_cstr, mis_total);
+
 }
 
 // 数值 初始化
@@ -109,11 +120,6 @@ void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
 
         break;
 
-        case MISSION_INFO_DEL: // 删除本地存档
-
-            mission_setting_del(msg);
-
-        break;
     }
 
 }
@@ -225,26 +231,53 @@ void Task_part::mission_setting_load
 
 }
 
-// gcs -> uav   |读取本地任务   |需要回应 
+// gcs -> uav   |保存到本地任务   |需要回应 
 // mavcomm_msgs::mission_info   .flag=MISSION_INFO_SAVE 
 void Task_part::mission_setting_save
     (const mavcomm_msgs::mission_info::ConstPtr& msg)
+// 不改变当前状态   current_mission_state 不变
 {
+    // 通过校验后保存到本地
+    if ( (current_mission_state==MISSION_STATE_CHECKED)
+        || (current_mission_state==MISSION_STATE_SAVED )
+        ) 
+    {
+        // 校验 长度
+        if ( mis_total != msg->mission_num )
+        {
+            mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 1);
+            return;
+        }
+
+        // 校验 flag
+        if ( (mis_save_param[0] == msg->param1) &&
+             (mis_save_param[1] == msg->param2) )
+        {
+            mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 2);
+            return;
+        }
+
+        // 确认打开 Json 文件目录
+        file_storage_path = file_storage_path_head + std::string("task_")
+            + std::to_string(mis_total) + std::string("_")
+            + std::to_string(mis_save_param[0]) + std::to_string(mis_save_param[1])
+            + std::string(".json");
+        strcpy(file_storage_path_cstr, file_storage_path.c_str());
+
+        // json 保存
+        int back_i;
+        back_i = nljson_file_save(file_storage_path_cstr, mis_total);
+
+       
+        // 保存结果 应该是成功的
+        // 不改变当前状态   current_mission_state 不变
+        mission_F_settings_back_info( MISSION_STATE_SAVED );
+    } else
+    {
+        mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 3);
+    }
 
 }
-
-// gcs -> uav   |读取本地任务   |需要回应 
-// mavcomm_msgs::mission_info   .flag=MISSION_INFO_DEL 
-void Task_part::mission_setting_del
-    (const mavcomm_msgs::mission_info::ConstPtr& msg)
-{
-
-}
-
-
-
-
-
 
 
 //-------------------------------------------------
@@ -292,6 +325,23 @@ void Task_part::mission_F_settings_back_info(int flag_state, int param1)
         msg_mission_back_info.param2 = mis_save_param[1];
     break;
     
+    //-------------------------------------- 
+    // 保存 成功
+    case MISSION_STATE_SAVED:   // 保存成功
+        msg_mission_back_info.flag = MISSION_STATE_SAVED;
+        msg_mission_back_info.mission_num = mis_total;
+        msg_mission_back_info.param1 = mis_save_param[0];
+        msg_mission_back_info.param2 = mis_save_param[1];
+    break;
+
+    //-------------------------------------- 
+    // 保存 失败
+    case MISSION_STATE_SAVE_FAIL:   // 保存失败
+        msg_mission_back_info.flag = MISSION_STATE_SAVE_FAIL;
+        msg_mission_back_info.mission_num = mis_total;
+        msg_mission_back_info.param1 = param1;
+        msg_mission_back_info.param2 = param1;
+    break;
 
     default:
         return;
@@ -364,3 +414,51 @@ void Task_part::task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg)
     // std::cont << "test" << std::endl;msg
     // ROS_INFO_STREAM( "only test i = " << i );
 }
+
+//-------------------------------------------------
+// Func                            nljson save&load
+//-------------------------------------------------
+
+int Task_part::nljson_file_save(char *path, int num)
+{
+
+    std::cout << "save file to -" << path << std::endl; 
+
+    // 保存 mis_array.msg_mission_set 到 path 路径
+
+
+
+
+
+    // 序列化
+    // j.dump(4)
+
+    // just for test 
+
+
+
+
+    
+    // std::ofstream(path) << j;
+
+}
+
+int Task_part::nljson_file_load(char *path, int num)
+{
+    // 读取 mis_array.msg_mission_set 到 path 路径
+    // TODO json
+    
+    // std::ofstream(path) << j;
+
+}
+
+// json 处理
+
+
+
+
+
+
+
+
+
