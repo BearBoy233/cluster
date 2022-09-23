@@ -22,7 +22,7 @@ Task_part::Task_part():
     if (file_storage_path_head != "nan")
     {
         std::string str_temp;
-        str_temp = "/../mavmission/data";
+        str_temp = "/../mavmission/data/";
         file_storage_path_head = file_storage_path_head + str_temp;
     }
 
@@ -46,13 +46,12 @@ Task_part::Task_part():
     // TBD
     // TEST
     mis_total = 1;
-    file_storage_path = file_storage_path_head + std::string("task_")
-        + std::to_string(mis_total) + std::string(".json");
+    file_storage_path = file_storage_path_head + std::string("test")
+        + std::string(".json");
     strcpy(file_storage_path_cstr, file_storage_path.c_str());
-        
-    // json 保存
+    // json 读取
     int back_i;
-    back_i = nljson_file_save(file_storage_path_cstr, mis_total);
+    back_i = nljson_file_load(file_storage_path_cstr, mis_total, 1, 1);
 
 }
 
@@ -228,6 +227,32 @@ void Task_part::mission_setting_check
 void Task_part::mission_setting_load
     (const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
+    mis_total = msg->mission_num;
+    mis_save_param[0] = msg->param1; 
+    mis_save_param[1] = msg->param2; 
+
+    // mission 标志位设置
+    current_mission_state = MISSION_STATE_LOADING;
+
+    int back_i;
+    back_i = nljson_file_load(file_storage_path_cstr, mis_total, mis_save_param[0], mis_save_param[1]);
+
+    if ( back_i == 11)
+    {   // 读取成功
+        // mission 标志位设置
+        current_mission_state = MISSION_STATE_LOADED;
+        // mission_back_info
+        // 告知 gcs
+        mission_F_settings_back_info( current_mission_state );
+    } else if ( back_i == 22)
+    {   // 读取失败
+        // mission 标志位设置
+        current_mission_state = MISSION_STATE_LOAD_FAIL;
+        // mission_back_info
+        // 告知 gcs
+        mission_F_settings_back_info( current_mission_state );
+
+    }
 
 }
 
@@ -419,16 +444,112 @@ void Task_part::task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg)
 // Func                            nljson save&load
 //-------------------------------------------------
 
-int Task_part::nljson_file_save(char *path, int num)
+/*
+## msg_mission_set.header;
+## msg_mission_set.compid;
+## msg_mission_set.sysid;
+
+msg_mission_set.mission_no;
+msg_mission_set.flag;
+msg_mission_set.mission_task;
+msg_mission_set.uav_no;
+msg_mission_set.x;
+msg_mission_set.y;
+msg_mission_set.z;
+msg_mission_set.yaw;
+msg_mission_set.param1;
+msg_mission_set.param2;
+msg_mission_set.param3;
+*/
+
+void Task_part::from_json_to_mis_array()
+{
+    for (int i=0; i<test_json_data.size(); i++ )
+    {
+        test_json_data[i].at("flag").get_to( mis_array[i].msg_mission_set.flag );
+        test_json_data[i].at("mission_no").get_to( mis_array[i].msg_mission_set.mission_no );
+        test_json_data[i].at("mission_task").get_to( mis_array[i].msg_mission_set.mission_task );
+        test_json_data[i].at("param1").get_to( mis_array[i].msg_mission_set.param1 );
+        test_json_data[i].at("param2").get_to( mis_array[i].msg_mission_set.param2 );
+        test_json_data[i].at("param3").get_to( mis_array[i].msg_mission_set.param3 );
+        test_json_data[i].at("uav_no").get_to( mis_array[i].msg_mission_set.uav_no );
+        test_json_data[i].at("x").get_to( mis_array[i].msg_mission_set.x );
+        test_json_data[i].at("y").get_to( mis_array[i].msg_mission_set.y );
+        test_json_data[i].at("yaw").get_to( mis_array[i].msg_mission_set.yaw );
+        test_json_data[i].at("z").get_to( mis_array[i].msg_mission_set.z );
+
+        mis_array[i].flag_set = 1;
+
+        if ( mis_array[i].msg_mission_set.uav_no == my_id ) 
+        {
+            mis_array[i].flag_this_uav = 1;
+        }
+        else 
+        {
+            mis_array[i].flag_this_uav = 0;
+        }
+
+    }
+}
+
+int Task_part::nljson_file_load(char *path, int num, uint8_t param1, uint8_t param2)
+{
+    std::cout << "load mission data from json file: " << path << std::endl; 
+
+    // 读取
+    std::ifstream in(path); //打开文件，关联到流in
+
+    if (in.is_open() )
+    {   // 文件存在 打开
+        in >> test_json_data;       //从流in中(也就是./person.json文件)读取内容到json对象中，会覆盖之前内容
+        in.close();                 //关闭文件流in
+        // 清空
+        task_init();
+
+        mis_total = num;
+        mis_array_current = 0;
+
+        mis_save_param[0] = param1;
+        mis_save_param[1] = param2;
+
+        // json 转到数组
+        from_json_to_mis_array();
+
+        /* test 
+        std::cout << "0.param1=" << ( int (mis_array[0].msg_mission_set.param1)&0xff) << std::endl;
+        std::cout << "1.param1=" << ( int (mis_array[1].msg_mission_set.param1)&0xff) << std::endl;
+
+        std::cout << "0.x=" << ( (mis_array[0].msg_mission_set.x) ) << std::endl;
+        std::cout << "1.x=" << ( (mis_array[1].msg_mission_set.x) ) << std::endl;
+
+        std::cout << "j.size()=" << test_json_data.size() << std::endl;
+        std::cout << std::setw(4) << test_json_data << std::endl;
+        std::cout << "test_json_data[0]" << std::endl << test_json_data[0] << std::endl;
+        */
+        return 11;
+    } else 
+    { // 不存在 报错
+        in.close(); 
+        std::cout << "Error! json file not exist!" << std::endl; 
+        return 22;
+    } 
+}
+
+void Task_part::from_mis_array_to_json()
 {
 
-    std::cout << "save file to -" << path << std::endl; 
+
+
+
+}
+
+int Task_part::nljson_file_save(char *path, int num)
+{
+    std::cout << "save mission data to json file: " << path << std::endl; 
+    
+    // from_json(hututu, &mis_array[0]);
 
     // 保存 mis_array.msg_mission_set 到 path 路径
-
-
-
-
 
     // 序列化
     // j.dump(4)
@@ -436,23 +557,12 @@ int Task_part::nljson_file_save(char *path, int num)
     // just for test 
 
 
-
-
-    
+    // 输出
     // std::ofstream(path) << j;
 
 }
 
-int Task_part::nljson_file_load(char *path, int num)
-{
-    // 读取 mis_array.msg_mission_set 到 path 路径
-    // TODO json
-    
-    // std::ofstream(path) << j;
-
-}
-
-// json 处理
+// json 处理 END
 
 
 

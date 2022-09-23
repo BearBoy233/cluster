@@ -88,8 +88,13 @@ private:
     int nljson_file_save(char *path, int num=2); //保存
 
     // int nljson_file_load(std::string path, int num=2); //读取
-    int nljson_file_load(char *path, int num=2); //读取
+    int nljson_file_load(char *path, int num, uint8_t param1, uint8_t param2);//读取
 
+
+    json test_json_data;
+
+    void from_json_to_mis_array();
+    void from_mis_array_to_json();
 
 private:
     // 数值 初始化
@@ -115,6 +120,35 @@ private:
     mavcomm_msgs::mission_info msg_temp_mission_info;
     mavcomm_msgs::mission_back_info msg_temp_mission_back_info;
 
+    void to_json(nlohmann::json& j, const MIS&p) {
+        j= json{ 
+            {"flag", p.msg_mission_set.flag}, 
+            {"mission_no", p.msg_mission_set.mission_no}, 
+            {"mission_task", p.msg_mission_set.mission_task},
+            {"param1", p.msg_mission_set.param1}, 
+            {"param2", p.msg_mission_set.param2},
+            {"param3", p.msg_mission_set.param3},
+            {"uav_no", p.msg_mission_set.uav_no},
+            {"x", p.msg_mission_set.x}, 
+            {"y", p.msg_mission_set.y},
+            {"yaw", p.msg_mission_set.yaw}, 
+            {"z", p.msg_mission_set.z},
+            };
+    }
+
+    void from_json(const nlohmann::json& j, MIS&p) {
+        j.at("flag").get_to(p.msg_mission_set.flag);
+        j.at("mission_no").get_to(p.msg_mission_set.mission_no);
+        j.at("mission_task").get_to(p.msg_mission_set.mission_task);
+        j.at("param1").get_to(p.msg_mission_set.param1);
+        j.at("param2").get_to(p.msg_mission_set.param2);
+        j.at("param3").get_to(p.msg_mission_set.param3);
+        j.at("uav_no").get_to(p.msg_mission_set.uav_no);
+        j.at("x").get_to(p.msg_mission_set.x);
+        j.at("y").get_to(p.msg_mission_set.y);
+        j.at("yaw").get_to(p.msg_mission_set.yaw);
+        j.at("z").get_to(p.msg_mission_set.z);
+    }
 
 public:
 //-------------------------------------------------
