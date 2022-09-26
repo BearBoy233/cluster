@@ -1,5 +1,9 @@
 /gen_mavlink
-common.yaml
+/common.yaml
 #CMakeLists.txt
 .vscode/
 .doc
+
+mavmission/data/
+!mavmission/data/test.json
+!mavmission/data/test_save.json

@@ -5,6 +5,14 @@
 #ifndef COM_DEFINE_H
 #define COM_DEFINE_H
 
+#include <ros/ros.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <optional>
+// #include <cJSON.h>
+#include "nlohmann/json.hpp"
+
 #define NNN 11
 
 // sysid    发送端编号
@@ -20,15 +28,10 @@
 // double pi = 3.1415926;
 #define PI_3 3.1415926
 
-
-#include <ros/ros.h>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <optional>
-// #include <cJSON.h>
-#include "nlohmann/json.hpp"
-
+// Help Func
+// 系统时间
+uint64_t get_time_usec();
+// 上下限函数
+float satfunc(float data, float Max);
 
 #endif
-

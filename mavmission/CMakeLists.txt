@@ -52,9 +52,10 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 add_library(mission
+  src/com_define.cpp
   src/mission.cpp
   src/task_part.cpp
-  # src/cJSON.cpp 
+  src/formation_part.cpp 
 )
 add_dependencies(mission
   ${catkin_EXPORTED_TARGETS}

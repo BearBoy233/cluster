@@ -1,0 +1,9 @@
+# common config parameter
+
+# my_id 	本设备编号 	/100-地面站 	/99-所有无人机
+# /system_id 发送端编号	/companion_id 接收端编号
+my_id: 1
+
+# Flag_1ShowRn 	输出测试 /0-不输出 /1-输出关键 /2-全输出 
+Flag_1ShowRn: 2
+

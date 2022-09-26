@@ -1,71 +1,61 @@
 
-//-------------------------------------------------
-// formation part
-//-------------------------------------------------
-
-void formation_init();
-
-void ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-
-void set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-
-//################################################################------编队飞行模块
-// 订阅其他无人机的位置 (已经减掉 队形偏差量了)
-ros::Subscriber ot_loc_pos_enu_sub;
-mavcomm_msgs::local_pos_enu msg_ot_local_pos_enu;
-double ot_pos_x[NNN];
-double ot_pos_y[NNN];
-double ot_pos_z[NNN];
-double ot_pos_yaw[NNN];
-// TODO 待拓展 当前只能编一组队
-int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； /TODO 参与编队的其他无人机 Num;
-int ot_num_sum;         // 编组内无人机个数
-int ot_this_num;        // 本机编组 TODO
-// 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉 (px4_bridge 中完成)
-// 当前仅考虑 室内定位系统(ENU) 的情况 (TODO GPS/ VINS...)
-// 本机 编队偏差
-float ot_offset_x = 0.0;
-float ot_offset_y = 0.0;
-float ot_offset_z = 0.0;      // 暂时不用
-float ot_offset_yaw = 0.0;    // 暂时不用
-
-// mavcomm 初始设置无人机编队 队形
-ros::Subscriber set_local_pos_enu_sub;
-mavcomm_msgs::local_pos_enu msg_local_pos_enu;
-
-// 无人机队形 设置回应
-ros::Publisher set_local_pos_enu_pub;         // 告知地面站 无人机编队误差设置
-
-
+#include <formation_part.h>
+ 
+using namespace mav_mission;
 
 //-------------------------------------------------
-// formation part
+// Init 初始化
 //-------------------------------------------------
-
-void Mav_Mission::formation_init()
+Formation_part::Formation_part():
+    tp_nh("~"),             // param    /uav_mission/xxx
+    mavcomm_nh("mavcomm")   // mavcomm  /mavcomm/XXX   pub&sub
 {
-    // --------------------------------------------------------------------------------------------------------------
+    // 数值 初始化
+    task_init();
+
+    // load param
+    tp_nh.param<int>("my_id", my_id, 100);
+
+    std::cout << "uav_mission/my_id = " << my_id << std::endl;
+
+
+    // 话题订阅     | gcs -> uav
+
+
     // 编队控制
     // 接收 其他无人机的位置信息 编队飞行
     //### ot_loc_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/loc_pos_enu", 10, ot_loc_pos_enu_cb );
     // 无人机 ENU 航点Pos(flag=1) 编队误差设计(flag=2) 
     //### set_local_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, set_local_pos_enu_cb );
     // 无人机编队偏差反馈 (flag=3)
-    set_local_pos_enu_pub = nh.advertise<mavcomm_msgs::local_pos_enu>("/mavcomm/send/set_loc_pos_enu", 1); // 告知地面站 无人机编队误差设置
+    // set_local_pos_enu_pub = nh.advertise<mavcomm_msgs::local_pos_enu>("/mavcomm/send/set_loc_pos_enu", 1); // 告知地面站 无人机编队误差设置
 
 
+
+
+
+}
+
+// 数值 初始化
+void Formation_part::task_init()
+{
     // 编队偏差
     for (int i=1;i<NNN;i++)
     { 
         flag_ot_num[i] = 0;   //以后归    flag
     }
-    
+
+
 }
+//-------------------------------------------------
+// formation part
+//-------------------------------------------------
+
 
 // 回调函数
 // 编队飞行
 // /mavcomm/receive/loc_pos_enu
-void Mav_Mission::ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+void Formation_part::ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
 {
     int num;
 
@@ -79,7 +69,7 @@ void Mav_Mission::ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr 
     ot_pos_yaw[num] = (double) msg_ot_local_pos_enu.yaw;
 }
 
-void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+void Formation_part::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
 {
     msg_local_pos_enu = *msg;
 
@@ -116,7 +106,8 @@ void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstP
 }
 
 // 分布式 编队控制算法
-void Mav_Mission::formation_pidVelocityControl()
+/*
+void Formation_part::formation_pidVelocityControl()
 {
     // 直接给速度指令
 
@@ -187,3 +178,4 @@ void Mav_Mission::formation_pidVelocityControl()
     pub_ctrl_set_vel.publish(msg_ctrl_set_vel);
 
 }
+*/

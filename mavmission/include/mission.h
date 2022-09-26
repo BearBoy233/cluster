@@ -27,15 +27,11 @@
 
 // 主要负责任务的 设置 
 #include <task_part.h>
+// 编队模块
+#include <formation_part.h>
+
 
 namespace mav_mission {
-
-/*
-// help func
-uint64_t get_time_usec();
-void quit_handler(int sig);
-float satfunc(float data, float Max);
-*/
 
 class Mav_Mission
 {
@@ -44,8 +40,6 @@ public:
 	~Mav_Mission() {};
 
 	void run();
-
-	// help func
 
 	Task_part _task_part;
 	// mav_mission::Mav_Mission mission;
@@ -147,26 +141,11 @@ int flag_mission_pause_task = 0;    // 任务暂停       1暂停&悬停 /2暂�
 }	// namespace mav_mission
 
 ///-----------------------------------------------------------------------------------------
-//			工具类
+//			QuitSignalHandler
 //-----------------------------------------------------------------------------------------
-uint64_t get_time_usec()	// Time 获取系统时间
-{	
-	static struct timeval _time_stamp;
-	gettimeofday(&_time_stamp, NULL);
-	return _time_stamp.tv_sec * 1000000 + _time_stamp.tv_usec;
-}
-
 // QuitSignalHandler  Called when you press Ctrl-C
 void quit_handler(int sig)
 {	
 	printf("\n TERMINATING AT USER REQUEST \n \n");
 	exit(0);// end program here
-}
-
-float satfunc(float data, float Max)
-{
-    if( abs(data)>Max )
-        return (data>0)?Max:-Max;
-    else
-        return data;
 }

@@ -1,28 +1,28 @@
 [
-	{
-        "mission_no": 1,
+    {
         "flag": 1,
+        "mission_no": 1,
         "mission_task": 1,
-        "uav_no": 1,
-        "x": 10.01,
-        "y": 20.02,
-        "z": 30.03,
-        "yaw": 90,
         "param1": 111,
         "param2": 222,
-        "param3": 333
+        "param3": 77,
+        "uav_no": 1,
+        "x": -10.01,
+        "y": -20.02,
+        "yaw": -90.0,
+        "z": -30.03
     },
     {
-        "mission_no": 2,
         "flag": 0,
+        "mission_no": 2,
         "mission_task": 1,
+        "param1": 188,
+        "param2": 43,
+        "param3": 154,
         "uav_no": 2,
         "x": 110.011,
         "y": 120.021,
-        "z": 130.031,
-        "yaw": 180,
-        "param1": 444,
-        "param2": 555,
-        "param3": 666
+        "yaw": 180.0,
+        "z": 130.031
     }
 ]

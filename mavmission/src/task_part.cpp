@@ -43,16 +43,21 @@ Task_part::Task_part():
     mission_back_info_pub = mavcomm_nh.advertise<mavcomm_msgs::mission_back_info>
         ("send/mission_back_info", 1);
 
-    // TBD
-    // TEST
-    mis_total = 1;
+    // Json Test
+    /*
+    mis_total = 2;
+    // 读取测试
     file_storage_path = file_storage_path_head + std::string("test")
         + std::string(".json");
     strcpy(file_storage_path_cstr, file_storage_path.c_str());
-    // json 读取
     int back_i;
     back_i = nljson_file_load(file_storage_path_cstr, mis_total, 1, 1);
-
+    // 保存测试
+    file_storage_path = file_storage_path_head + std::string("test_save")
+        + std::string(".json");
+    strcpy(file_storage_path_cstr, file_storage_path.c_str());
+    back_i = nljson_file_save(file_storage_path_cstr, mis_total);
+    */
 }
 
 // 数值 初始化
@@ -293,15 +298,21 @@ void Task_part::mission_setting_save
         int back_i;
         back_i = nljson_file_save(file_storage_path_cstr, mis_total);
 
-       
-        // 保存结果 应该是成功的
-        // 不改变当前状态   current_mission_state 不变
-        mission_F_settings_back_info( MISSION_STATE_SAVED );
+        if ( back_i == 11)
+        {   // 保存成功
+            // mission_back_info
+            // 告知 gcs
+            mission_F_settings_back_info( MISSION_STATE_SAVED );
+        } else if ( back_i == 22)
+        {   // 保存失败
+            // mission_back_info
+            // 告知 gcs
+            mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 3);
+        }
     } else
     {
-        mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 3);
+        mission_F_settings_back_info( MISSION_STATE_SAVE_FAIL, 4);
     }
-
 }
 
 
@@ -408,13 +419,13 @@ void Task_part::mission_settings_back_info(mavcomm_msgs::mission_back_info msg)
 
 void Task_part::mission_set_cb(const mavcomm_msgs::mission_set::ConstPtr &msg)
 {
-    // 在 设置模式 下，才能进行 任务设置
+    // 1-在 设置模式 下，才能进行 任务设置
     if ( current_mission_state==MISSION_STATE_SETTING ) 
     {   
         task_mission_set(msg);
     } else if (   current_mission_state==MISSION_STATE_CHECKING
                 ||current_mission_state==MISSION_STATE_CHECK_FAIL_INCOMPLETE )
-    {   // 在 校验/校验不完全 的模式下，才能进行 任务设置
+    {   // 2-在 校验/校验不完全 的模式下，才能进行 任务设置
         task_mission_set(msg);
     }
 }
@@ -441,10 +452,11 @@ void Task_part::task_mission_set(const mavcomm_msgs::mission_set::ConstPtr& msg)
 }
 
 //-------------------------------------------------
-// Func                            nljson save&load
+// Func                          json & struct 转换
 //-------------------------------------------------
 
-/*
+/* detail mis_array[i].msg_mission_set
+
 ## msg_mission_set.header;
 ## msg_mission_set.compid;
 ## msg_mission_set.sysid;
@@ -461,7 +473,7 @@ msg_mission_set.param1;
 msg_mission_set.param2;
 msg_mission_set.param3;
 */
-
+// json 转到 数组
 void Task_part::from_json_to_mis_array()
 {
     for (int i=0; i<test_json_data.size(); i++ )
@@ -492,6 +504,37 @@ void Task_part::from_json_to_mis_array()
     }
 }
 
+// 数组 转 json
+void Task_part::from_mis_array_to_json(int num)
+{
+    test_json_data.clear();
+
+    for (int i=0; i<num; i++ )
+    {
+        temp_json_data = json{
+            {"flag", mis_array[i].msg_mission_set.flag}, 
+            {"mission_no", mis_array[i].msg_mission_set.mission_no}, 
+            {"mission_task", mis_array[i].msg_mission_set.mission_task},
+            {"param1", mis_array[i].msg_mission_set.param1}, 
+            {"param2", mis_array[i].msg_mission_set.param2}, 
+            {"param3", mis_array[i].msg_mission_set.param3},
+            {"uav_no", mis_array[i].msg_mission_set.uav_no}, 
+            {"x", mis_array[i].msg_mission_set.x}, 
+            {"y", mis_array[i].msg_mission_set.y},
+            {"z", mis_array[i].msg_mission_set.z}, 
+            {"yaw", mis_array[i].msg_mission_set.yaw}
+            };
+
+        test_json_data.push_back(temp_json_data);
+
+    }
+
+}
+
+//-------------------------------------------------
+// Func                            nljson save&load
+//-------------------------------------------------
+// 从文档读取
 int Task_part::nljson_file_load(char *path, int num, uint8_t param1, uint8_t param2)
 {
     std::cout << "load mission data from json file: " << path << std::endl; 
@@ -535,40 +578,30 @@ int Task_part::nljson_file_load(char *path, int num, uint8_t param1, uint8_t par
     } 
 }
 
-void Task_part::from_mis_array_to_json()
-{
-
-
-
-
-}
-
+// 保存到文档
 int Task_part::nljson_file_save(char *path, int num)
 {
     std::cout << "save mission data to json file: " << path << std::endl; 
     
-    // from_json(hututu, &mis_array[0]);
+    // 保存
+    std::ofstream of(path); //打开文件，关联到流of
 
-    // 保存 mis_array.msg_mission_set 到 path 路径
+    if ( of.is_open()==0 )
+    {   
+        // 打开失败
+        of.close();
+        std::cout << "Error! can not open json file !" << std::endl; 
+        return 22;
+    } else 
+    {
+        // 数组 转到 json
+        from_mis_array_to_json(num);
 
-    // 序列化
-    // j.dump(4)
-
-    // just for test 
-
-
-    // 输出
-    // std::ofstream(path) << j;
-
+        of << test_json_data.dump(4);
+        of.close(); 
+        return 11;
+    }
 }
 
 // json 处理 END
-
-
-
-
-
-
-
-
 
