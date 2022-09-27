@@ -1,0 +1,29 @@
+
+<launch>
+  <!-- vim: set ft=xml noet : -->
+  <!-- base node launch file-->
+
+  <group ns="uav1">
+  <node pkg="mav_mission" type="uav_mission" name="uav_mission" output="screen">
+    <!-- common param -->          
+    <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+    <param name="my_id" value="1" />	<!-- group ns= -->
+
+    <param name="Flag_1ShowRn" value="2" />
+    <param name="file_storage_path_head" value="$(find mavcomm)" type="string" />
+  </node>
+  </group>
+
+  <group ns="uav2">
+  <node pkg="mav_mission" type="uav_mission" name="uav_mission" output="screen">
+    <!-- common param -->          
+    <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+    <param name="my_id" value="2" />	<!-- group ns= -->
+
+    <param name="Flag_1ShowRn" value="2" />
+    <param name="file_storage_path_head" value="$(find mavcomm)" type="string" />
+  </node>
+  </group>
+
+</launch>
+

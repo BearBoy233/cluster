@@ -7,7 +7,7 @@ using namespace mav_mission;
 //-------------------------------------------------
 Mav_Mission::Mav_Mission() :
 	nh("~"),				// 用于发布订阅绝对话题 + roslaunch param get
-	mavlink_nh("mavlink")	// allow to namespace it
+	mavlink_nh("~")	// allow to namespace it
 {
 	// load param
     nh.param<int>("my_id", my_id, 100);
@@ -139,12 +139,12 @@ void Mav_Mission::commom_init()
     pub_ctrl_set_vel = nh.advertise<geometry_msgs::TwistStamped>("/desired/setVel", 1);
 
     // TODO 发布无人机状态 待其他程序调用
-    pub_CurrentMissionState = nh.advertise<std_msgs::UInt8>("/mavcomm/mission_state", 1);
+    pub_CurrentMissionState = mavlink_nh.advertise<std_msgs::UInt8>("/mavcomm/mission_state", 1);
 
     // mavros state
     /* Local position from FCU. ENU坐标系(惯性系) */ 
     
-	currentPose_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
+	currentPose_sub = mavlink_nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
     
 	//### currentVelocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 10, currentVelocity_cb );
 

@@ -16,23 +16,28 @@ Formation_part::Formation_part():
     // load param
     tp_nh.param<int>("my_id", my_id, 100);
 
-    std::cout << "uav_mission/my_id = " << my_id << std::endl;
+    std::cout << "formation uav_mission/my_id = " << my_id << std::endl;
 
+    // 话题订阅     | neibor uav -> uav
+    // 编队控制     |接收 其他无人机的位置信息 编队飞行
+    ot_loc_pos_enu_sub = mavcomm_nh.subscribe<mavcomm_msgs::local_pos_enu>
+        ("receive/loc_pos_enu", 10, &Formation_part::ot_loc_pos_enu_cb, this );
 
-    // 话题订阅     | gcs -> uav
-
-
-    // 编队控制
-    // 接收 其他无人机的位置信息 编队飞行
-    //### ot_loc_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/loc_pos_enu", 10, ot_loc_pos_enu_cb );
-    // 无人机 ENU 航点Pos(flag=1) 编队误差设计(flag=2) 
-    //### set_local_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, set_local_pos_enu_cb );
-    // 无人机编队偏差反馈 (flag=3)
-    // set_local_pos_enu_pub = nh.advertise<mavcomm_msgs::local_pos_enu>("/mavcomm/send/set_loc_pos_enu", 1); // 告知地面站 无人机编队误差设置
-
-
-
-
+    // 话题订阅         | gcs -> uav
+    // 编队设置         // TBC flag=>enum
+    //  (flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
+    // *(flag=2) gcs->uav 编队误差设置      (formation.cpp)
+    //  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
+    set_local_pos_enu_sub = mavcomm_nh.subscribe<mavcomm_msgs::local_pos_enu>
+        ("receive/set_loc_pos_enu", 10, &Formation_part::set_local_pos_enu_cb, this );
+    
+    // 发送         | uav -> gcs
+    // 任务设置反馈
+    //  (flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
+    //  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
+    // *(flag=3) uav->gcs 编队误差反馈      (formation.cpp)
+    set_local_pos_enu_pub = mavcomm_nh.advertise<mavcomm_msgs::local_pos_enu>
+        ("send/set_loc_pos_enu", 1);    // 告知地面站 无人机编队误差设置
 
 }
 
@@ -45,30 +50,40 @@ void Formation_part::task_init()
         flag_ot_num[i] = 0;   //以后归    flag
     }
 
-
 }
+
 //-------------------------------------------------
-// formation part
+// Func              邻居无人机位置-ot_loc_pos_enu_cb
 //-------------------------------------------------
 
-
-// 回调函数
-// 编队飞行
-// /mavcomm/receive/loc_pos_enu
-void Formation_part::ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+// 回调函数     /mavcomm/receive/loc_pos_enu
+// 话题订阅     | neibor uav -> uav
+// 编队控制     |接收 其他无人机的位置信息 编队飞行
+void Formation_part::ot_loc_pos_enu_cb
+    (const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
 {
     int num;
 
     msg_ot_local_pos_enu = *msg;
 
     num = (int) msg_ot_local_pos_enu.sysid;   // 发送端无人机编号
-    flag_ot_num[num] = 1;                     // 以后归    flag
+    flag_ot_num[num] = 1;                     // TBD 以后归 flag ?
     ot_pos_x[num] = (double) msg_ot_local_pos_enu.x; 
     ot_pos_y[num] = (double) msg_ot_local_pos_enu.y;
     ot_pos_z[num] = (double) msg_ot_local_pos_enu.z;
     ot_pos_yaw[num] = (double) msg_ot_local_pos_enu.yaw;
 }
 
+//-------------------------------------------------
+// Func        无人机编队阵型位置-set_local_pos_enu_cb
+//-------------------------------------------------
+
+// 回调函数     /mavcomm/receive/loc_pos_enu
+// 话题订阅         | gcs -> uav
+// 编队设置         // TBC flag=>enum
+//  (flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
+// *(flag=2) gcs->uav 编队误差设置      (formation.cpp)
+//  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
 void Formation_part::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
 {
     msg_local_pos_enu = *msg;
@@ -94,6 +109,9 @@ void Formation_part::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::Con
         ROS_INFO_STREAM( " Set ot_offset_xy [" << ot_offset_x << ", " << ot_offset_y << 
         ", " << ot_offset_z << "," << ot_offset_yaw / PI_3 * 180 << "]");
 
+
+    // TBC
+    
         msg_local_pos_enu.header.stamp = ros::Time::now();
         msg_local_pos_enu.flag = msg_local_pos_enu.sysid;
         msg_local_pos_enu.sysid = msg_local_pos_enu.compid;

@@ -26,8 +26,8 @@ Task_part::Task_part():
         file_storage_path_head = file_storage_path_head + str_temp;
     }
 
-    std::cout << "file_storage_path_head = " << file_storage_path_head << std::endl;
-    std::cout << "uav_mission/my_id = " << my_id << std::endl;
+    std::cout << "task_part file_storage_path_head = " << file_storage_path_head << std::endl;
+    std::cout << "task_part uav_mission/my_id = " << my_id << std::endl;
 
     // 话题订阅     | gcs -> uav
 	mission_info_sub = mavcomm_nh.subscribe<mavcomm_msgs::mission_info>
@@ -85,7 +85,8 @@ void Task_part::task_init()
 //-------------------------------------------------
 // Func                     任务设置-mission_info_cb
 //-------------------------------------------------
-void Task_part::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr &msg)
+void Task_part::mission_info_cb
+    (const mavcomm_msgs::mission_info::ConstPtr &msg)
 {
     msg_temp_mission_info = *msg;
 
