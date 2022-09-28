@@ -6,11 +6,13 @@ using namespace mav_mission;
 // Init
 //-------------------------------------------------
 Mav_Mission::Mav_Mission() :
-	nh("~"),				// 用于发布订阅绝对话题 + roslaunch param get
-	mavlink_nh("~")	// allow to namespace it
+    tp_nh("~"),             // param    /uav_mission/xxx
+    mavcomm_nh("mavcomm"),  // mavcomm  /mavcomm/XXX   pub&sub
+    mavros_nh("mavros"),    // mavros   /mavros/XXX
+    desired_nh("desired")   // desired  /desired/XXX 
 {
 	// load param
-    nh.param<int>("my_id", my_id, 100);
+    tp_nh.param<int>("my_id", my_id, 100);
 	std::cout << "uav_mission/my_id = " << my_id << std::endl;
 
 	//Responds to early exits signaled with Ctrl-C. 
@@ -18,6 +20,17 @@ Mav_Mission::Mav_Mission() :
 
     // Init
     commom_init();
+
+    // pub & sub
+
+    // 话题订阅         | gcs -> uav
+    // 编队设置         // TBC flag=>enum
+    // *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) 
+    //  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
+    //  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
+    set_local_pos_enu_sub = mavcomm_nh.subscribe<mavcomm_msgs::local_pos_enu>
+        ("receive/set_loc_pos_enu", 10, &Mav_Mission::set_local_pos_enu_cb, this );
+    
 
     // TBD
     // mission_state = UNINIT;
@@ -32,14 +45,6 @@ void Mav_Mission::run()
 	ros::Rate loop_rate(20);
 
     int temp = ID_GCS;
-
-    /*
-	spinner.start();
-	ros::waitForShutdown();
-
-	ROS_INFO("Stopping mavros...");
-	spinner.stop();
-    */
    	
     while (	ros::ok() ) 
     {	
@@ -61,21 +66,6 @@ void Mav_Mission::run()
             // 判断无人机模式 [! ]
 
             // if ()
-
-/*
-int mis_total;                  // 当前任务 总数目
-int mis_array_current;          // 当前任务
-uint8_t mis_save_param[3];       // 无人机存储 参数
-
-// 任务数组
-struct MIS {
-    mavcomm_msgs::mission_set msg_mission_set;
-    bool flag_set;          // 是否设置了
-    bool flag_this_uav;     // 是否为本机的任务
-    int last_uav_mis_no;    // 上一个 与本机有关的任务 编号
-    int next_uav_mis_no;    // 下一个 与本机有关的任务 编号
-} mis_array[200];
-*/
 
         PoseControl();  // 位置控制 + fast_planner
 
@@ -132,24 +122,21 @@ void Mav_Mission::commom_init()
 
     // common
     // 不使用 预留
-    pub_ctrl_set_position = nh.advertise<geometry_msgs::Point>("/desired/setTarget_position", 1);
+    pub_ctrl_set_position = desired_nh.advertise<geometry_msgs::Point>("setTarget_position", 1);
     // 主要的 pos fast-planner
-    pub_ctrl_set_pose = nh.advertise<geometry_msgs::Pose>("/desired/setTarget_pose", 1);
+    pub_ctrl_set_pose = desired_nh.advertise<geometry_msgs::Pose>("setTarget_pose", 1);
     // TODO 编队
-    pub_ctrl_set_vel = nh.advertise<geometry_msgs::TwistStamped>("/desired/setVel", 1);
+    pub_ctrl_set_vel = desired_nh.advertise<geometry_msgs::TwistStamped>("setVel", 1);
 
     // TODO 发布无人机状态 待其他程序调用
-    pub_CurrentMissionState = mavlink_nh.advertise<std_msgs::UInt8>("/mavcomm/mission_state", 1);
+    pub_CurrentMissionState = mavcomm_nh.advertise<std_msgs::UInt8>("mission_state", 1);
 
     // mavros state
     /* Local position from FCU. ENU坐标系(惯性系) */ 
     
-	currentPose_sub = mavlink_nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
+	currentPose_sub = mavros_nh.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
     
 	//### currentVelocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 10, currentVelocity_cb );
-
-	// 无人机 ENU 航点Pos(flag=1) 编队误差设计(flag=2) 
-    //### set_local_pos_enu_sub = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, set_local_pos_enu_cb );
 
 }
 
@@ -188,11 +175,6 @@ void Mav_Mission::track_pidVelocityControl()
 
 }
 
-
-
-
-
-
 /*
 // 地面站 => 无人机
 void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& msg)
@@ -207,118 +189,6 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
     // 不区分 system_id  companion_id
     switch (msg_mission_info.flag)
     {
-        case 1: // 任务设置 初始化
-
-            Task_part::mission_settings_init(msg)
-
-            // 回应信号
-            // mission_back_info
-            // 告知 无人机 本机已经在 等待接收状态了
-            msg_mission_back_info.sysid = my_id;
-            msg_mission_back_info.compid = ID_GCS;
-
-            msg_mission_back_info.flag = 1;
-            msg_mission_back_info.mission_num = mis_total;
-            msg_mission_back_info.param1 = mis_save_param[0];
-            msg_mission_back_info.param2 = mis_save_param[1];
-
-            mission_back_info_pub.publish(msg_mission_back_info);
-
-        break;
-
-        case 2: // 任务设置完 校验
-            
-
-        break;
-
-        case 3: // 读取&保存任务
-            bool results; // 文件读取&保存结果 正确1 错误0
-            // TODO
-            if (msg_mission_info.param1 == 1)
-            {   // 读取
-                // 读取 文件名  XXX + msg_mission_info.param2. XXX
-                // func []
-                // results = 读取结果
-
-                // 回应信号
-                // mission_back_info
-
-                if ( results )
-                {   // 读取正确
-
-                    // 标志位设置
-                    flag_mission_set = 2;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
-                    flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
-
-                    msg_mission_back_info.sysid = my_id;
-                    msg_mission_back_info.compid = ID_GCS;
-
-                    msg_mission_back_info.flag = 3;
-                    msg_mission_back_info.mission_num = mis_total;
-                    msg_mission_back_info.param1 = mis_save_param[0]; //
-                    msg_mission_back_info.param2 = mis_save_param[1]; //
-                    mission_back_info_pub.publish(msg_mission_back_info);
-                }
-                else
-                {
-                    // 标志位设置
-                    flag_mission_set = 5;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
-                    flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
-
-                    msg_mission_back_info.sysid = my_id;
-                    msg_mission_back_info.compid = ID_GCS;
-
-                    msg_mission_back_info.flag = 4;
-                    msg_mission_back_info.mission_num = 0;
-                    msg_mission_back_info.param1 = 1; //
-                    msg_mission_back_info.param2 = 5; //
-                    mission_back_info_pub.publish(msg_mission_back_info);
-                }
-
-            } else if (msg_mission_info.param1 == 2)
-            {
-                // 保存 文件名  XXX + msg_mission_info.param2. XXX
-                // func []
-                // results = 读取结果
-
-                // 回应信号
-                // mission_back_info
-
-                if ( results )
-                {   // 保存正确
-
-                    // 标志位设置 (该是啥还是啥)
-                    // flag_mission_set = 2;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
-                    // flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
-
-                    msg_mission_back_info.sysid = my_id;
-                    msg_mission_back_info.compid = ID_GCS;
-
-                    msg_mission_back_info.flag = 3;
-                    msg_mission_back_info.mission_num = mis_total;
-                    msg_mission_back_info.param1 = mis_save_param[0]; //
-                    msg_mission_back_info.param2 = mis_save_param[1]; //
-                    mission_back_info_pub.publish(msg_mission_back_info);
-                }
-                else
-                {
-                    // 保存错误 (一般不会出现)
-                    flag_mission_set = 5;       // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
-                    flag_mission_start = 0;     // 0-未开始 1-任务运行 2-暂停
-
-                    msg_mission_back_info.sysid = my_id;
-                    msg_mission_back_info.compid = ID_GCS;
-
-                    msg_mission_back_info.flag = 4;
-                    msg_mission_back_info.mission_num = 0;
-                    msg_mission_back_info.param1 = 2; // 1读 2写
-                    msg_mission_back_info.param2 = 5; //
-                    mission_back_info_pub.publish(msg_mission_back_info);
-                }
-
-            }
-        break;
-
         case 4: // 任务开始
             // mis_total = (int) msg_mission_info.mission_num;
             // 判断任务总数是否
@@ -380,3 +250,36 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
 }
 
 */
+
+
+
+//-------------------------------------------------
+// Func          设置飞机单点目标-set_local_pos_enu_cb
+//-------------------------------------------------
+// TBC
+// 回调函数     /mavcomm/receive/loc_pos_enu
+// 话题订阅         | gcs -> uav
+// 编队设置         // TBC flag=>enum
+// *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp)
+//  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
+//  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
+void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+{
+    // TBC mission 状态位置切换
+
+    msg_local_pos_enu = *msg;
+
+    if (msg_local_pos_enu.flag == 1)
+    {   
+        //  设置飞机目标位置
+        Mission_pose_current.position.x = (double) msg_local_pos_enu.x; 
+        Mission_pose_current.position.y = (double) msg_local_pos_enu.y;
+        Mission_pose_current.position.z = (double) msg_local_pos_enu.z;
+        Mission_pose_current.orientation.w = (double) msg_local_pos_enu.yaw;
+
+        ROS_INFO_STREAM( " Set target Pos to [" << Mission_pose_current.position.x << ", " << 
+        Mission_pose_current.position.y << ", " << Mission_pose_current.position.z << ", " << 
+        Mission_pose_current.orientation.w / PI_3 * 180.0 << "]");
+    }
+
+}

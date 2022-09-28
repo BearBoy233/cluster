@@ -1,5 +1,6 @@
 // Function 订阅 MAVROS话题 转为 RosTopic 消息 发送 
 // TODO 发布频率修改？
+// px4 /mavros/(enu)local_pos 信息 初始化
 
 #define ID_GCS 100
 #define ID_ALL 99 
@@ -63,15 +64,6 @@ bool						flag_gps_fix = false;
 // 
 ros::Subscriber 			sub_uav_state_machine; 
 uint8_t 					node_state = 0;
-
-
-ros::Subscriber sub_set_local_pos_enu;
-void cb_sub_set_local_pos_enu(const mavcomm_msgs::local_pos_enu::ConstPtr& msg);
-float ot_offset_x = 0.0;
-float ot_offset_y = 0.0;
-float ot_offset_z = 0.0;      // 暂时不用
-float ot_offset_yaw = 0.0;    // 暂时不用
-
 
 // pub mavcomm topic
 // heatrbeat
@@ -174,24 +166,6 @@ void cb_sub_px4_VFR_HUD(const mavros_msgs::VFR_HUD::ConstPtr& rmsg)
 	msg_px4_VFR_HUD = *rmsg;
 }
 
-
-void cb_sub_set_local_pos_enu(const mavcomm_msgs::local_pos_enu::ConstPtr& msg)
-{
-	mavcomm_msgs::local_pos_enu msg_local_pos_enu;
-	msg_local_pos_enu = *msg;
-
-	if (msg_local_pos_enu.flag == 2)
-    {   //  设置飞机编队偏差
-        ot_offset_x = msg_local_pos_enu.x; 
-        ot_offset_y = msg_local_pos_enu.y; 
-        ot_offset_z = msg_local_pos_enu.z; 
-        ot_offset_yaw = msg_local_pos_enu.yaw; 
-
-        ROS_INFO_STREAM( " Set ot_offset_xy [" << ot_offset_x << ", " << ot_offset_y << "]");
-    }
-
-}
-
 //-----------------------------------------------------------------------------------------
 //			Main()
 //-----------------------------------------------------------------------------------------
@@ -200,26 +174,24 @@ int main(int argc, char *argv[])
 	ros::init(argc, argv, "px4_bridge");
 
 	ros::NodeHandle nh("~"); // 用于发布订阅绝对话题 + roslaunch param get
-	ros::NodeHandle nh_ad("/mavcomm/send");
+	ros::NodeHandle nh_mavros("mavros"); // 用于发布订阅绝对话题 + roslaunch param get
+	ros::NodeHandle nh_mavcomm("mavcomm");
 
 	// sub
-	sub_px4_state = nh.subscribe<mavros_msgs::State>("/mavros/state", 1, cb_sub_px4_state);
-	sub_px4_gps_raw = nh.subscribe<mavros_msgs::GPSRAW>("/mavros/gpsstatus/gps1/raw", 1, cb_sub_px4_gps_raw_state);
-	sub_px4_battery = nh.subscribe<sensor_msgs::BatteryState>("/mavros/battery", 1, cb_sub_px4_battery);
+	sub_px4_state = nh_mavros.subscribe<mavros_msgs::State>("state", 1, cb_sub_px4_state);
+	sub_px4_gps_raw = nh_mavros.subscribe<mavros_msgs::GPSRAW>("gpsstatus/gps1/raw", 1, cb_sub_px4_gps_raw_state);
+	sub_px4_battery = nh_mavros.subscribe<sensor_msgs::BatteryState>("battery", 1, cb_sub_px4_battery);
 
-	sub_px4_loc_pos = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, cb_sub_px4_loc_pos);
-	sub_px4_global_pos = nh.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 1, cb_sub_px4_global_pos);
-	sub_px4_VFR_HUD = nh.subscribe<mavros_msgs::VFR_HUD>("/mavros/vfr_hud", 1, cb_sub_px4_VFR_HUD);
+	sub_px4_loc_pos = nh_mavros.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 1, cb_sub_px4_loc_pos);
+	sub_px4_global_pos = nh_mavros.subscribe<sensor_msgs::NavSatFix>("global_position/global", 1, cb_sub_px4_global_pos);
+	sub_px4_VFR_HUD = nh_mavros.subscribe<mavros_msgs::VFR_HUD>("vfr_hud", 1, cb_sub_px4_VFR_HUD);
 
 
-	sub_uav_state_machine = nh.subscribe<std_msgs::UInt8>("/mavcomm/uav_state_machine", 1, cb_sub_uav_state_machine);
-
-	sub_set_local_pos_enu = nh.subscribe<mavcomm_msgs::local_pos_enu>("/mavcomm/receive/set_loc_pos_enu", 10, cb_sub_set_local_pos_enu);
-    
+	sub_uav_state_machine = nh.subscribe<std_msgs::UInt8>("uav_state_machine", 1, cb_sub_uav_state_machine);
 	// pub
-	pub_heartbeat = nh_ad.advertise<mavcomm_msgs::Heartbeat>("heartbeat", 1);
-	pub_loc_pos = nh_ad.advertise<mavcomm_msgs::local_pos_enu>("loc_pos_enu", 1);
-	pub_global_pos = nh_ad.advertise<mavcomm_msgs::global_pos_int>("gps_pos", 1);
+	pub_heartbeat = nh_mavcomm.advertise<mavcomm_msgs::Heartbeat>("send/heartbeat", 1);
+	pub_loc_pos = nh_mavcomm.advertise<mavcomm_msgs::local_pos_enu>("send/loc_pos_enu", 1);
+	pub_global_pos = nh_mavcomm.advertise<mavcomm_msgs::global_pos_int>("send/gps_pos", 1);
 
 
 	//Responds to early exits signaled with Ctrl-C. 
@@ -258,6 +230,7 @@ int main(int argc, char *argv[])
 			}
 		}	
 
+		// TODO  广播 本机位置 频率
 		send_loc_pos();
 
 		if (count_n == 9) 
@@ -332,7 +305,7 @@ void send_heartbeat()// msg_heartbeat 控制发布频率
 	pub_heartbeat.publish(msg_heartbeat);
 }
 
-//	TODO 需要 减掉 本机的编队误差后再用
+
 void send_loc_pos()// msg_loc_pos 控制发布频率
 {
 	msg_pub_loc_pos.header.stamp = ros::Time::now();
@@ -340,10 +313,10 @@ void send_loc_pos()// msg_loc_pos 控制发布频率
 	msg_pub_loc_pos.compid = ID_ALL; 	//ID_GCS; 		//	发送给 地面站
 
 	msg_pub_loc_pos.flag = 0;	//	#1001 LOCAL_POSITION_ENU 无 flag
-	msg_pub_loc_pos.x = (float) msg_px4_loc_pos.pose.position.x - ot_offset_x;
-	msg_pub_loc_pos.y = (float) msg_px4_loc_pos.pose.position.y - ot_offset_y;
-	msg_pub_loc_pos.z = (float) msg_px4_loc_pos.pose.position.z - ot_offset_z;
-	msg_pub_loc_pos.yaw = loc_pos_yaw - ot_offset_yaw;
+	msg_pub_loc_pos.x = (float) msg_px4_loc_pos.pose.position.x;
+	msg_pub_loc_pos.y = (float) msg_px4_loc_pos.pose.position.y;
+	msg_pub_loc_pos.z = (float) msg_px4_loc_pos.pose.position.z;
+	msg_pub_loc_pos.yaw = loc_pos_yaw;
 
 	pub_loc_pos.publish(msg_pub_loc_pos);
 }

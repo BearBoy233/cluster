@@ -7,7 +7,6 @@
 ## formation-part 模块
 
 
----
 ### 主要功能
 
 ```
@@ -16,79 +15,87 @@
   编队位置告知 (ENU - 编队偏差)
 ```
 
-### TBD
-#### 流程和状态切换 [mission调用]
+- 一致性编队控制算法(一阶)
+
+$$ u_i(t) = \sum_{j=0}^{n}{a_{ij}} [ x_{j}(t) - x_{i}(t) - ( \delta_{j} - \delta_{i} ) ] $$
+
+$i$ $j$       无人机编号
+$n$           无人机总数 
+$u_i$         无人机 $i$ 控制指令
+$a_{ij}$      通信拓扑
+$x_{i}$       无人机 $i$ 位置 (ENU)
+$\delta_{i}$  无人机 $i$ 编队偏差
+
+- **TODO编队模式多样性** 
+
+  √ 相对ENU不变
+  
+  × 相对领机偏航不变
+
+  × 分组编队而不是全部
+  
+  × 编队变化（尺度大小/队形状态…）
+
+  × 多Leader?
+    
+  × 根据实际位置寻找最佳位置?
+
+
+#### (TBC) 大致流程 [mission调用]
 
 ```Mermaid
 
 stateDiagram-v2
 
-[*] --> 初始化 : MISSION_STATE_NAN
+[*] --> 初始化 : 
 
-初始化 --> 任务信息 : mission_info(MISSION_INFO_SET_INIT)
+初始化 --> 编队阵型设置 : set_local_pos_enu_cb(flag=2)
 
-任务信息 --> [gcs]数传传入 : MISSION_STATE_SETTING
-任务信息 --> [uav]本地读取 : MISSION_STATE_LOADED
+编队阵型设置 --> 等待编队任务开始 : 
 
-[gcs]数传传入 --> 集群任务信息校验 : mission_info(MISSION_INFO_CHECK)
-[uav]本地读取 --> 集群任务信息校验 : mission_info(MISSION_INFO_CHECK)
+编队阵型设置 --> 广播飞机位置(已经减去了编队偏差) : 
 
-集群任务信息校验 --> [gcs]数传传入 : MISSION_STATE_CHECK_FAIL
+等待编队任务开始 --> 队形集结（可选） : (TODO)避碰 & 同时/依次序集结 
 
-集群任务信息校验 --> 等待任务执行 : MISSION_STATE_CHECKED
-等待任务执行 --> [uav]本地存储 : 
+队形集结（可选） --> 编队执行任务 : 跟leader领机的航迹
 
-等待任务执行 --> [*]
+编队执行任务 --> 任务完成 : (TODO)安全解散
+
+任务完成 --> [*]
 
 ```
 
-#### 编队偏差设置
+#### 编队阵型设置 TBCG
 
-```Mermaid
-
+```Merma5id
 sequenceDiagram
+
 
 participant gcs
 participant uav1
 participant uavN
 
-Note over gcs, uavN : 发送初始化
+Note over gcs, uavN : 阵型输入设置
 
-gcs ->> uav1 : mission_info (flag=1)
+gcs ->> gcs : 阵型输入
+gcs ->> gcs : 阵型校验(x&y不能相同)
+
+Note over gcs, uavN : 阵型设置&校验(ot_offset)
+
+gcs ->> uav1 : mavcomm/receive/set_loc_pos_enu (flag=2)
 gcs ->> uavN : 
 
-gcs -->> gcs : start timeout [TODO-Auto]
-uav1 -->> uav1 : current_mission_state=MISSION_SETTING
-uavN -->> uavN : current_mission_state=MISSION_SETTING
+uav1 -->> uav1 : ot_offset_?
+uavN -->> uavN : ot_offset_?
 
-uav1 -->> gcs : mission_back_info(flag=MISSION_SETTING)
+uav1 -->> gcs : mavcomm/send/set_loc_pos_enu(flag=3)
 uavN -->> gcs : 
 
+gcs ->> gcs : 确保每架飞机都设置了 
 
-Note over gcs, uavN : 遍历发送 mission_set
-
-gcs ->> uav1 : mission_set(0)
-gcs ->> uavN : 
-Note over gcs : mission_set [0，M)
-gcs ->> uav1 : mission_set(M)
-gcs ->> uavN : 
-
-
-Note over gcs, uavN : 校验
-
-loop 遍历校验
-    gcs->>uav1 : mission_info (flag=2)
-    gcs->>uavN : 
-    Note over uav1, uavN : 遍历mis_array
-    
-    Note over uav1 : 缺少mission_set(?)
-    uav1 -->> uav1 : current_mission_state=MISSION_CHECK_FAIL_INCOMPLETE
-    uav1 -->> gcs : mission_back_info(flag=MISSION_CHECK_FAIL_INCOMPLETE)[param=?]
-    gcs ->> uav1 : mission_set(?)
-    
-    Note over uavN : 完整mission_set
-    uavN -->> uavN : current_mission_state=MISSION_CHECKED
-    uavN -->> gcs : mission_back_info(flag=MISSION_CHECKED)
-end
+Note over gcs, uavN : 等待编队飞行
 
 ```
+
+
+

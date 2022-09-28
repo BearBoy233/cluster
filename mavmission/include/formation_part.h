@@ -13,6 +13,16 @@
 
 #include <mavcomm_msgs/local_pos_enu.h>
 
+// mission_back_info.msg
+enum FORMATION_MISSION {
+    FORMATION_STATE_NAN = 0,
+
+    FORMATION_STATE_SETTING,
+
+    FORMATION_STATE_CHECKING,
+    FORMATION_STATE_CHECKED,
+    FORMATION_STATE_CHECK_FAIL
+};
 
 namespace mav_mission {
 
@@ -28,12 +38,15 @@ private:
     // mavcomm (pub/sub)
     ros::NodeHandle mavcomm_nh;
 
+    // formation part
+    enum FORMATION_MISSION current_formation_state; // 当前的编队模块状态
+
     // param 参数读取 
     // my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
     int my_id;
 
     // 数值 初始化
-    void task_init();
+    void formation_init();
 
     // 编队飞行模块
     double ot_pos_x[NNN];
@@ -44,7 +57,7 @@ private:
     int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； /TODO 参与编队的其他无人机 Num;
     int ot_num_sum;         // 编组内无人机个数
     int ot_this_num;        // 本机编组 TODO
-    // 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉 (px4_bridge 中完成)
+    // 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉
     // 当前仅考虑 室内定位系统(ENU) 的情况 (TODO GPS/ VINS...)
     // 本机 编队偏差
     float ot_offset_x = 0.0;

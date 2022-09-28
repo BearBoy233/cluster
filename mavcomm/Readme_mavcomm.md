@@ -6,7 +6,7 @@
 1.  ROS Topic <-----> Customize Mavlink Serial
 2.  ROS话题 与 自定义Mavlink协议数据的 转换、发布&接收
 3.  通用(不区分地面站&飞机端) 自定义mavlink消息传输
-4.  [plugins] 飞机端订阅mavros话题
+4.  [plugins] 飞机端订阅mavros话题 & 广播无人机位置(ENU)
 
 TODO
 1.  add Func(UDP 发送和接收)

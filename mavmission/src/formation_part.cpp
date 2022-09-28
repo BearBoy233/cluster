@@ -11,7 +11,9 @@ Formation_part::Formation_part():
     mavcomm_nh("mavcomm")   // mavcomm  /mavcomm/XXX   pub&sub
 {
     // 数值 初始化
-    task_init();
+    formation_init();
+
+    current_formation_state = FORMATION_STATE_NAN;
 
     // load param
     tp_nh.param<int>("my_id", my_id, 100);
@@ -32,7 +34,7 @@ Formation_part::Formation_part():
         ("receive/set_loc_pos_enu", 10, &Formation_part::set_local_pos_enu_cb, this );
     
     // 发送         | uav -> gcs
-    // 任务设置反馈
+    // 编队设置反馈
     //  (flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
     //  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
     // *(flag=3) uav->gcs 编队误差反馈      (formation.cpp)
@@ -42,8 +44,10 @@ Formation_part::Formation_part():
 }
 
 // 数值 初始化
-void Formation_part::task_init()
+void Formation_part::formation_init()
 {
+    // TBC
+
     // 编队偏差
     for (int i=1;i<NNN;i++)
     { 
@@ -88,18 +92,7 @@ void Formation_part::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::Con
 {
     msg_local_pos_enu = *msg;
 
-    if (msg_local_pos_enu.flag == 1)
-    {   //  设置飞机目标位置
-        Mission_pose_current.position.x = (double) msg_local_pos_enu.x; 
-        Mission_pose_current.position.y = (double) msg_local_pos_enu.y;
-        Mission_pose_current.position.z = (double) msg_local_pos_enu.z;
-        Mission_pose_current.orientation.w = (double) msg_local_pos_enu.yaw;
-
-        ROS_INFO_STREAM( " Set target Pos to [" << Mission_pose_current.position.x << ", " << 
-        Mission_pose_current.position.y << ", " << Mission_pose_current.position.z << ", " << 
-        Mission_pose_current.orientation.w / PI_3 * 180.0 << "]");
-    }
-    else if (msg_local_pos_enu.flag == 2)
+    if (msg_local_pos_enu.flag == 2)
     {   //  设置飞机编队偏差
         ot_offset_x = msg_local_pos_enu.x; 
         ot_offset_y = msg_local_pos_enu.y; 
@@ -110,7 +103,7 @@ void Formation_part::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::Con
         ", " << ot_offset_z << "," << ot_offset_yaw / PI_3 * 180 << "]");
 
 
-    // TBC
+        // TBC
     
         msg_local_pos_enu.header.stamp = ros::Time::now();
         msg_local_pos_enu.flag = msg_local_pos_enu.sysid;
