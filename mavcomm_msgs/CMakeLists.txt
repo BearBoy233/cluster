@@ -22,9 +22,15 @@ add_message_files(
   kcf_set_target.msg
   kcf_target_pos.msg
 
+
+
   mission_info.msg
   mission_back_info.msg
   mission_set.msg
+  
+  formation_back_info.msg
+  formation_set.msg
+  formation_set_info.msg
 
 )
 

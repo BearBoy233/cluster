@@ -25,6 +25,9 @@
 // mission 数组最大
 #define MAX_NUM_MIS 255
 
+// formation 设置队形编组
+#define FORMATION_GROUP_PPP 10
+
 // double pi = 3.1415926;
 #define PI_3 3.1415926
 

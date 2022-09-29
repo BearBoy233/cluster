@@ -1,5 +1,5 @@
 // 编队飞行 模块
- 
+  
 // 编队 队形设置、编队飞行
 
 // #pragma once
@@ -12,6 +12,9 @@
 #include <geometry_msgs/TwistStamped.h>
 
 #include <mavcomm_msgs/local_pos_enu.h>
+#include <mavcomm_msgs/formation_set.h>
+#include <mavcomm_msgs/formation_set_info.h>
+#include <mavcomm_msgs/formation_back_info.h>
 
 // mission_back_info.msg
 enum FORMATION_MISSION {
@@ -48,13 +51,42 @@ private:
     // 数值 初始化
     void formation_init();
 
-    // 编队飞行模块
-    double ot_pos_x[NNN];
-    double ot_pos_y[NNN];
-    double ot_pos_z[NNN];
-    double ot_pos_yaw[NNN];
-    // TODO 待拓展 当前只能编一组队
-    int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； /TODO 参与编队的其他无人机 Num;
+    // 编队阵型设置
+    int current_group;  // 当前使用的编队阵型
+    int 
+
+    // 可分组编队
+    struct FORM {
+        // 设置的原始编队信息
+        mavcomm_msgs::formation_set msg_formation_set;
+        
+        // 无人机N的 编队偏置量
+        double offset_x;
+        double offset_y;
+        double offset_z;
+        double offset_yaw;
+
+        bool flag_this_group;   // 是否是本组的
+
+    } formation_array[NNN][FORMATION_GROUP_PPP];   // 保存编队的队形信息
+
+    struct FORM_loc_pos_enu {
+
+        // 无人机N 编队偏置量
+        double x;
+        double y;
+        double z;
+        double yaw;
+
+        bool flag_update;   // 是否更新
+        uint64_t last_msg_rec_time;
+        uint64_t cur_msg_rec_time;
+
+    } neighbor_loc_pos_ENU[NNN];   // 邻居无人机 位置信息
+
+    int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； 
+    //TODO 参与编队的其他无人机 Num;
+    
     int ot_num_sum;         // 编组内无人机个数
     int ot_this_num;        // 本机编组 TODO
     // 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉

@@ -67,9 +67,9 @@ stateDiagram-v2
 
 #### 编队阵型设置 TBCG
 
-```Merma5id
-sequenceDiagram
+```Mermaid
 
+sequenceDiagram
 
 participant gcs
 participant uav1
