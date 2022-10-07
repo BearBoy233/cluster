@@ -125,6 +125,15 @@ void Task_part::mission_info_cb
 
         break;
 
+        case MISSION_INFO_RUN: // 仅供测试用,正常直接调用
+
+            // TODO
+
+        break;
+
+        default:
+            // return;
+        break;
     }
 
 }

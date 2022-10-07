@@ -6,6 +6,7 @@
 
 ```
   主模块&调度
+  task含义的解析&执行
 ```
 
 - 功能模块
@@ -21,9 +22,9 @@
 [编队控制模块/formationpart](./doc/formation.md)
 
 ```
-  编队阵型设置 (gcs->uav)
+  编队阵型设置 (gcs->uav) (TDL uav-leader->uav)
   编队控制 
-  编队位置告知 (ENU - 编队偏差)
+  ## 无人机位置告知 (ENU) [/mavcomm/px4_bridge.cpp里]
 ```
 
 

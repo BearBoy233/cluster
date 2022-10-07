@@ -22,9 +22,6 @@
 
 #include <mav_mission/PositionCommand.h>
 
-#include <tf/tf.h>
-#include <tf/transform_datatypes.h>
-
 // 主要负责任务的 设置 
 #include <task_part.h>
 // 编队模块
@@ -42,7 +39,9 @@ public:
 	void run();
 
 	Task_part _task_part;
+	Formation_part _formation_part;
 	// mav_mission::Mav_Mission mission;
+
 
 private:
     // 用于 订阅 发布 param读取

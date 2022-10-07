@@ -6,12 +6,6 @@
 ---
 ## task-part 模块
 
-[参考/mavlink-services-mission](https://mavlink.io/en/services/mission.html)
-
-- diff
-
-  一对一的设置模式 => 一对多设置 (增加效率)
-
 ---
 ### 主要功能
 
@@ -20,6 +14,12 @@
   任务执行 (任务进度获取)
   任务保存/读取 (json格式)
 ```
+
+[参考/mavlink-services-mission](https://mavlink.io/en/services/mission.html)
+
+- diff
+
+  一对一的设置模式 => 一对多设置 (增加效率)
 
 #### 流程和状态切换 [mission调用]
 

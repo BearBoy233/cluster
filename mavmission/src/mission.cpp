@@ -1,3 +1,9 @@
+// TODO
+//  1. 分组执行任务 
+//      => 需要 在 mavcomm 中增加 group 的 判断 & 设置
+//      部分可参考 formation 中 分组编队的设置
+
+
 #include <mission.h>
 
 using namespace mav_mission;
@@ -105,6 +111,10 @@ void Mav_Mission::run()
         // 实现的话 + 1 
 
         }
+
+        // Formation_part.
+        
+        // test_run_spinonce();
             
         ros::spinOnce();
 		loop_rate.sleep();
@@ -133,21 +143,17 @@ void Mav_Mission::commom_init()
 
     // mavros state
     /* Local position from FCU. ENU坐标系(惯性系) */ 
-    
 	currentPose_sub = mavros_nh.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
-    
-	//### currentVelocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 10, currentVelocity_cb );
+    /* Local velocity from FCU. ENU坐标系(惯性系) */ 
+	currentVelocity_sub = mavros_nh.subscribe<geometry_msgs::TwistStamped>("local_position/velocity_local", 10, &Mav_Mission::currentVelocity_cb, this );
 
 }
 
 
 
 //-----------------------------------------------------------------------------------------
-//	px4 PID control ()
+//	px4 mavros 
 //-----------------------------------------------------------------------------------------
-
-// 回调函数
-
 // 无人机位置 local
 void Mav_Mission::currentPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -161,6 +167,12 @@ void Mav_Mission::currentVelocity_cb(const geometry_msgs::TwistStamped::ConstPtr
 }
 
 
+
+
+//-----------------------------------------------------------------------------------------
+//	px4 PID control ()
+//-----------------------------------------------------------------------------------------
+// 
 
 void Mav_Mission::PoseControl()
 {   

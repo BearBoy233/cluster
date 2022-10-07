@@ -9,22 +9,35 @@
 
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 
 #include <mavcomm_msgs/local_pos_enu.h>
-#include <mavcomm_msgs/formation_set.h>
-#include <mavcomm_msgs/formation_set_info.h>
-#include <mavcomm_msgs/formation_back_info.h>
 
-// mission_back_info.msg
-enum FORMATION_MISSION {
+#include <mavcomm_msgs/formation_info.h>
+#include <mavcomm_msgs/formation_back_info.h>
+#include <mavcomm_msgs/formation_set.h>
+
+
+enum ENUM_INFO_FORMATION {
+    FORMATION_INFO_NAN = 0,
+    FORMATION_INFO_SET_INIT,
+    FORMATION_INFO_CHECK,
+    FORMATION_INFO_RUN      // 仅供测试用,正常直接调用
+};
+
+enum ENUM_STATE_FORMATION {
     FORMATION_STATE_NAN = 0,
 
     FORMATION_STATE_SETTING,
 
     FORMATION_STATE_CHECKING,
     FORMATION_STATE_CHECKED,
-    FORMATION_STATE_CHECK_FAIL
+    FORMATION_STATE_CHECK_FAIL,
+
+    FORMATION_STATE_RUN_FORMING,
+    FORMATION_STATE_RUNNING,
+    FORMATION_STATE_RUN_FAIL
 };
 
 namespace mav_mission {
@@ -40,9 +53,8 @@ private:
     ros::NodeHandle tp_nh;
     // mavcomm (pub/sub)
     ros::NodeHandle mavcomm_nh;
-
-    // formation part
-    enum FORMATION_MISSION current_formation_state; // 当前的编队模块状态
+    // mavros (pub/sub)
+    ros::NodeHandle mavros_nh;
 
     // param 参数读取 
     // my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
@@ -52,13 +64,16 @@ private:
     void formation_init();
 
     // 编队阵型设置
-    int current_group;  // 当前使用的编队阵型
-    int 
+    // formation part
+    enum ENUM_STATE_FORMATION current_formation_state; // 当前的编队模块状态
+    
+    int current_group;  // TBU 当前使用的编队阵型 
 
-    // 可分组编队
+    // 编队阵型信息存储
+    // 支持分组编队
     struct FORM {
         // 设置的原始编队信息
-        mavcomm_msgs::formation_set msg_formation_set;
+        // mavcomm_msgs::formation_set msg_formation_set;
         
         // 无人机N的 编队偏置量
         double offset_x;
@@ -66,77 +81,146 @@ private:
         double offset_z;
         double offset_yaw;
 
-        bool flag_this_group;   // 是否是本组的
+        uint8_t flag;   
+        // TBE
+        // h7-l0
+        // 7 - leader_flag
+
+        bool flag_this_group;   // 是否是本组的 - check 里赋值
+        bool flag_set;          // 是否已经设置了 - init 里=0
+        bool flag_leader;       // leader 标志位
 
     } formation_array[NNN][FORMATION_GROUP_PPP];   // 保存编队的队形信息
 
-    struct FORM_loc_pos_enu {
+    // Init_formation_group_setting
+    int type_formtation_offset_group[FORMATION_GROUP_PPP];  // TBD 编队 组队类型？ TODO 
+    int num_formtation_offset_group[FORMATION_GROUP_PPP];   // 编组内无人机个数
+    // check_formation_group_setting
+    bool flag_formtation_offset_group_set[FORMATION_GROUP_PPP]; //标志位 设置完全 有更改则设置为0
+    int formation_set_check_current_num;    // 当前校验的无人机编队设置的 group_id FORMATION_GROUP_PPP
 
-        // 无人机N 编队偏置量
+    // 邻居无人机位置
+    struct FORM_loc_pos_enu {
+        // 无人机 N ENU 位置 
         double x;
         double y;
         double z;
         double yaw;
 
-        bool flag_update;   // 是否更新
+        bool flag_update;           // 是否更新 (和当前调用的时候比较？)
         uint64_t last_msg_rec_time;
         uint64_t cur_msg_rec_time;
+    } neighbor_loc_pos_ENU[NNN];    // 邻居无人机 位置信息
 
-    } neighbor_loc_pos_ENU[NNN];   // 邻居无人机 位置信息
-
-    int flag_ot_num[NNN];       // ==1 已知的邻居无人机位置 ； 
+    int flag_nb_connect_first[NNN]; // 首次与邻居无人机连接 (之后断开不变)
     //TODO 参与编队的其他无人机 Num;
     
-    int ot_num_sum;         // 编组内无人机个数
-    int ot_this_num;        // 本机编组 TODO
-    // 本机的编队偏差 实际发送 Loc 时, 偏差需要减掉
-    // 当前仅考虑 室内定位系统(ENU) 的情况 (TODO GPS/ VINS...)
-    // 本机 编队偏差
-    float ot_offset_x = 0.0;
-    float ot_offset_y = 0.0;
-    float ot_offset_z = 0.0;      // 暂时不用
-    float ot_offset_yaw = 0.0;    // 暂时不用
+    // PID参数
+    struct pid {
+        double p = 0.0;
+        double i = 0.0;
+        double d = 0.0;
 
+        double err = 0.0;
+        double err_last = 0.0;
+        double err_add = 0.0;
+    };
 
-    // 分布式 编队控制算法
-    // void formation_pidVelocityControl();
+    // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
+    int formation_ctrl_all(int switch_group_id);
+    
+    // 分布式 编队控制算法 type1
+    // leader 自己飞
+    // 从机 一阶 分布式编队控制算法 xy
+    void formation_ctrl_first_order_PID_xy
+        (float keep_d_z, float keep_d_yaw, geometry_msgs::TwistStamped *cal_ctrl_set_vel);
 
+    // TODO load !!!
+    //幅值限制
+    float maxVelocity_1storder_x;
+    float maxVelocity_1storder_y;
+    float maxVelocity_1storder_z;
+    float maxVelocity_1storder_yaw;
+    pid pid_1storder_x;
+    pid pid_1storder_y;
+    pid pid_1storder_z;
+    pid pid_1storder_yaw;
+    
     // 计算得到的最终控制
-    double delta_pos[3];
-    double delta_yaw;
-
-    // TBM
-    geometry_msgs::Pose Mission_pose_current;
+    double delta_enu_x;
+    double delta_enu_y;
+    double delta_enu_z;
+    double delta_enu_yaw;
+    double delta_enu_yaw_add;
 
 public:
+
 //-------------------------------------------------
 //                     编队邻居位置-ot_loc_pos_enu_cb
 //-------------------------------------------------
-    // 订阅其他无人机的位置 (已经减掉 队形偏差量了)
+    // 订阅其他无人机的位置 (需要 减掉 编队队形偏差量)
     ros::Subscriber ot_loc_pos_enu_sub;
     // 话题订阅     | neibor uav -> uav
     // 编队控制     |接收 其他无人机的位置信息 编队飞行
     void ot_loc_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-    mavcomm_msgs::local_pos_enu msg_ot_local_pos_enu;
+    mavcomm_msgs::local_pos_enu msg_ot_loc_pos_enu;
 
 //-------------------------------------------------
-// Func        无人机编队阵型位置-set_local_pos_enu_cb
+//                    无人机编队阵型位置-formation_set
 //-------------------------------------------------
-    // mavcomm 初始设置无人机编队 队形
-    ros::Subscriber set_local_pos_enu_sub;
-    // 回调函数     /mavcomm/receive/loc_pos_enu
-    // 话题订阅         | gcs -> uav
-    // 编队设置         // TBC flag=>enum
-    //  (flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
-    // *(flag=2) gcs->uav 编队误差设置      (formation.cpp)
-    //  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
-    void set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-    mavcomm_msgs::local_pos_enu msg_local_pos_enu;
-    
+    // mavcomm 设置无人机编队 队形
+    ros::Subscriber formation_set_sub;
+    // 话题订阅     | neibor uav -> uav
+    // 编队控制     |接收 其他无人机的位置信息 编队飞行
+    void formation_set_cb(const mavcomm_msgs::formation_set::ConstPtr &msg);
+    mavcomm_msgs::formation_set msg_formation_set;
 
+//-------------------------------------------------
+//                           编队设置-formation_info
+//-------------------------------------------------
+    // mavcomm 设置无人机编队 队形
+    ros::Subscriber formation_info_sub;
+    // 话题订阅     | neibor uav -> uav
+    // 编队控制     |接收 其他无人机的位置信息 编队飞行
+    void formation_info_cb(const mavcomm_msgs::formation_info::ConstPtr &msg);
+    mavcomm_msgs::formation_info msg_formation_info;
+
+    // 某组编队 设置 初始化
+    void Init_formation_group_setting
+        (int group_id, int group_num, int group_type, uint8_t receive_id);
+
+    // 某组编队 设置 校准
+    void check_formation_group_setting
+        (int group_id, int setbit_mm, uint8_t setbit_1, uint8_t setbit_2, uint8_t receive_id);
+
+//-------------------------------------------------
+//                   编队设置反馈-formation_back_info
+//-------------------------------------------------
     // 无人机队形 设置回应
-    ros::Publisher set_local_pos_enu_pub;         // 告知地面站 无人机编队误差设置
+    ros::Publisher formation_back_info_pub;         // 告知地面站 无人机编队误差设置
+    mavcomm_msgs::formation_back_info msg_formation_back_info;
+    
+    // uav -> gcs/uav-leader   编队设置 回应  [常规-msg]
+    void pubfunc_formation_back_info(mavcomm_msgs::formation_back_info msg);
 
+    // uav -> gcs/uav-leader   任务设置 回应  [由 flag 决定返回信息]
+    void pubfunc_F_formation_back_info
+        (int flag_state, int id_group, uint8_t receive_id, 
+        int param1=0, int param2=0, int param3=0);
+
+//-------------------------------------------------
+//                               px4 mavros 消息订阅 
+//-------------------------------------------------
+    // px4 mavros 消息订阅 enu 位置 mavros/local_position/pose
+    ros::Subscriber this_uav_px4_local_position_pose_sub;
+    void this_uav_px4_local_position_pose_cb(const geometry_msgs::PoseStamped::ConstPtr &msg);
+    geometry_msgs::PoseStamped currentPose;
+    // geometry_msgs::PoseStamped msg_PoseStamped;
+
+    // px4 mavros 消息订阅 vel 速度 mavros/local_position/velocity_local
+    ros::Subscriber this_uav_px4_local_position_velocity_local_sub;
+    void this_uav_px4_local_position_velocity_local_cb(const geometry_msgs::TwistStamped::ConstPtr &msg);
+    geometry_msgs::TwistStamped currentVelocity;
 
 };
 }

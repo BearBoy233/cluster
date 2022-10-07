@@ -16,16 +16,17 @@
 using json = nlohmann::json;
 
 // mision_info.msg
-enum MISSION_INFO {
+enum ENUM_INFO_MISSION {
     MISSION_INFO_NAN = 0,
     MISSION_INFO_SET_INIT,
     MISSION_INFO_CHECK,
     MISSION_INFO_LOAD,
     MISSION_INFO_SAVE,
+    MISSION_INFO_RUN    // 仅供测试用,正常直接调用
 };
 
 // mission_back_info.msg
-enum STATE_MISSION {
+enum ENUM_STATE_MISSION {
     MISSION_STATE_NAN = 0,
 
     MISSION_STATE_SETTING,
@@ -62,7 +63,7 @@ private:
     ros::NodeHandle mavcomm_nh;
 
     // mission part
-    enum STATE_MISSION current_mission_state; // 当前的任务状态
+    enum ENUM_STATE_MISSION current_mission_state; // 当前的任务状态
 
     // TBD
     // TODO 改成 枚举类型

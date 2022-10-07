@@ -13,6 +13,11 @@
 // #include <cJSON.h>
 #include "nlohmann/json.hpp"
 
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+
+// 无人机数量 
+// 需要使用编队模块时 最大16 (拓展setbit_mm后可增加)
 #define NNN 11
 
 // sysid    发送端编号

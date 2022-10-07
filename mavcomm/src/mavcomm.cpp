@@ -1,6 +1,7 @@
 // Function: 自定义Mavlink消息 MAVCOMM 与 ROS 话题之间转换 
 // supported P900 - ATS153=1 - in [p2m] OR [Mesh] mode
-// TODO Add UDP & TCP supported
+// TODO Add UDP & TCP support
+// TODO Add group support
 // TODO Refer MAVROS
 
 #define ID_GCS 100
@@ -640,7 +641,7 @@ int main(int argc, char *argv[])
         //  此处处理需要通过串口发送出去的数据
         //  QQQ
 		//  WRITE & Translate message to buffer
-        ros::spinOnce();
+        ros::spinOnce();	// 回调在 loop_rate.sleep() 前后 ?
 		loop_rate.sleep();
 	}
 
