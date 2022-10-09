@@ -20,6 +20,29 @@ Formation_part::Formation_part():
     // load param
     tp_nh.param<int>("my_id", my_id, 100);
     std::cout << "formation uav_mission/my_id = " << my_id << std::endl;
+    // load pid_1storder_x
+
+    tp_nh.param<double>("formation/pid_1storder/Kp_x", pid_1storder_x.p, 1.0);
+    tp_nh.param<double>("formation/pid_1storder/Ki_x", pid_1storder_x.i, 0.0);
+    tp_nh.param<double>("formation/pid_1storder/Kd_x", pid_1storder_x.d, 0.5);
+    
+    tp_nh.param<double>("formation/pid_1storder/Kp_y", pid_1storder_y.p, 1.0);
+    tp_nh.param<double>("formation/pid_1storder/Ki_y", pid_1storder_y.i, 0.0);
+    tp_nh.param<double>("formation/pid_1storder/Kd_y", pid_1storder_y.d, 0.5);
+
+    tp_nh.param<double>("formation/pid_1storder/Kp_z", pid_1storder_z.p, 1.0);
+    tp_nh.param<double>("formation/pid_1storder/Ki_z", pid_1storder_z.i, 0.0);
+    tp_nh.param<double>("formation/pid_1storder/Kd_z", pid_1storder_z.d, 0.5);
+
+    tp_nh.param<float>("formation/pid_1storder/maxVelocity_x", maxVelocity_1storder_x, 0.6);
+    tp_nh.param<float>("formation/pid_1storder/maxVelocity_y", maxVelocity_1storder_y, 0.6);
+    tp_nh.param<float>("formation/pid_1storder/maxVelocity_z", maxVelocity_1storder_z, 0.6);
+    tp_nh.param<float>("formation/pid_1storder/maxVelocity_yaw", maxVelocity_1storder_yaw, 1.0);
+
+    // std::cout << "pid_1storder_x.d = " << pid_1storder_x.d << std::endl;
+
+
+
 
     // 话题订阅     | neibor uav -> uav
     // 编队控制     |接收 其他无人机的位置信息 编队飞行

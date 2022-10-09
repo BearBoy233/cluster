@@ -8,6 +8,8 @@
   <node pkg="mav_mission" type="uav_mission" name="uav_mission" output="screen">
     <!-- common param -->          
     <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+    	<!-- formation pid_1storder param -->  
+    	<rosparam command="load" file="$(find mav_mission)/config/pid_1storder.yaml" />
 
     <param name="file_storage_path_head" value="$(find mavcomm)" type="string" />
 
