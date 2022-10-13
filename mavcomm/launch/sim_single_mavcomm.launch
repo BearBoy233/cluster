@@ -1,0 +1,27 @@
+
+<launch>
+    <!-- vim: set ft=xml noet : -->
+    <!-- mavcomm uav node launch file -->
+    <!-- mavcomm param -->
+    <arg name="serial_port" default="/dev/ttyUSB0" />
+    <arg name="baudrate" default="115200" />
+    <arg name="Flag_ats153" default="2" />
+    <!-- mavcomm -->
+    <node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="true"> 
+        <!-- common param -->          
+        <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+        <!-- mavcomm param -->	  
+        <param name="serial_port"     value="$(arg serial_port)" />
+	<param name="serial_baudrate" value="$(arg baudrate)" />
+        <param name="Flag_ats153"     value="$(arg Flag_ats153)" />
+    </node>
+    <!-- px4_bridge param -->
+    <arg name="Flag_1Mavros" default="0" />
+    <!-- px4_bridge -->
+    <node pkg="mavcomm" type="px4_bridge" name="px4_bridge" output="screen" respawn="true">
+        <!-- common param -->
+        <rosparam command="load" file="$(find mavcomm)/../common.yaml" />
+        <!-- px4_bridge param -->
+        <param name="Flag_1Mavros"     value="$(arg Flag_1Mavros)" />
+    </node>
+</launch>

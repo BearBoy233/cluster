@@ -5,7 +5,7 @@
 // double target_yaw = targetPose.orientation.w;    [-pi,pi]
 
 // TODO
-// gps support (放在其他模块，转换到 主体的LOC ENU系 下)
+// gps support (放在其他模块，转换到 主体的 LOC ENU系 下)    
 // 机体系控制
 
 #define NNN 11
@@ -35,7 +35,10 @@ class uavControl {
 
 public:
     // base param
-    uavControl(const ros::NodeHandle &nh_, const ros::NodeHandle &nh_private_);
+    uavControl( 
+    const ros::NodeHandle &nh_, 
+    const ros::NodeHandle &nh_private_
+    );
 
     ~uavControl();
 
@@ -57,6 +60,17 @@ public:
     ros::NodeHandle nh;
     ros::NodeHandle nh_private;
 
+    // 用于 订阅 发布 param读取
+    ros::NodeHandle tp_nh;
+    // mavcomm (pub/sub)
+    ros::NodeHandle mavcomm_nh;
+    // mavros (pub/sub)
+    ros::NodeHandle mavros_nh;
+    // desired
+	ros::NodeHandle desired_nh;
+    // gen
+	ros::NodeHandle gen_nh;
+
     ros::Rate *rate;
 
     bool Info_flag;
@@ -70,19 +84,19 @@ public:
     ros::Subscriber currentPose_sub;
     ros::Subscriber currentVelocity_sub;
     
-    ros::ServiceClient arming_client;       //解锁
-    ros::ServiceClient set_mode_client;     //设置模式
+    ros::ServiceClient arming_client;       // 解锁
+    ros::ServiceClient set_mode_client;     // 设置模式
 
     geometry_msgs::Pose currentPose;
     geometry_msgs::TwistStamped currentVelocity;  
-    mavros_msgs::State current_state;   /*px4当前状态*/
+    mavros_msgs::State current_state;       /*px4当前状态*/
     mavros_msgs::CommandBool arm_cmd; 
-    mavros_msgs::SetMode offb_set_mode; /*设置px4模式*/
+    mavros_msgs::SetMode offb_set_mode;     /*设置px4模式*/
 
     geometry_msgs::Pose homePose;
     geometry_msgs::Pose landPose;
     // mavros control
-    bool received_homePose_flag = false;        //设置 起飞点 local home 
+    bool received_homePose_flag = false;        // 设置 起飞点 local home 
 
     // ctrl 状态机  ------------------------------------------------------
     // mavcomm_changeState
@@ -114,7 +128,7 @@ public:
     ros::Publisher setVelocity_pub;             // 设置速度
     geometry_msgs::TwistStamped setVelocity;    // 速度控制指令
 
-    // ----------------------------------------- Pos PID cal ------------
+    //  Pos PID cal 
 
     // control
     void pidVelocityControl();
@@ -140,8 +154,8 @@ public:
     };
     pid pid_x, pid_y, pid_z, pid_yaw;
 
-    //  ### -----------------------------------------   uav 状态机------------
-    // 无人机状态 changestate /uav_ctrl.cpp#enum FlightState
+    //  uav 状态机
+    //  无人机状态 changestate /uav_ctrl.cpp#enum FlightState
     //  需要同步修改 px4_ctrl.cpp & console_widget.hpp/cpp & state_single_widget.hpp
     enum FlightState {
     UNINIT,                   // 未知状态
@@ -159,35 +173,42 @@ public:
 
 
 /* 构造函数 初始化参数 */
-uavControl::uavControl(const ros::NodeHandle &nh_, const ros::NodeHandle &nh_private_)
+uavControl::uavControl( 
+    const ros::NodeHandle &nh_, 
+    const ros::NodeHandle &nh_private_ )
 :nh(nh_),
- nh_private(nh_private_)
+ nh_private(nh_private_),
+    tp_nh("~"),             // param    /uav_mission/xxx
+    mavcomm_nh("mavcomm"),  // mavcomm  /mavcomm/XXX   pub&sub
+    mavros_nh("mavros"),    // mavros   /mavros/XXX
+    desired_nh("desired"),  // desired  /desired/XXX
+    gen_nh("gen")           // desired  /desired/XXX 
 {
     rate = new ros::Rate( 30.0 );
 
     // load pid param
-    nh_private.param<double>("Kp_x", pid_x.p, 2.0);
-    nh_private.param<double>("Ki_x", pid_x.i, 0.0);
-    nh_private.param<double>("Kd_x", pid_x.d, 1.5);
+    tp_nh.param<double>("Kp_x", pid_x.p, 2.0);
+    tp_nh.param<double>("Ki_x", pid_x.i, 0.0);
+    tp_nh.param<double>("Kd_x", pid_x.d, 1.5);
 
-    nh_private.param<double>("Kp_y", pid_y.p, 2.0);
-    nh_private.param<double>("Ki_y", pid_y.i, 0.0);
-    nh_private.param<double>("Kd_y", pid_y.d, 1.5);
+    tp_nh.param<double>("Kp_y", pid_y.p, 2.0);
+    tp_nh.param<double>("Ki_y", pid_y.i, 0.0);
+    tp_nh.param<double>("Kd_y", pid_y.d, 1.5);
 
-    nh_private.param<double>("Kp_z", pid_z.p, 2.0);
-    nh_private.param<double>("Ki_z", pid_z.i, 0.0);
-    nh_private.param<double>("Kd_z", pid_z.d, 1.2);
+    tp_nh.param<double>("Kp_z", pid_z.p, 2.0);
+    tp_nh.param<double>("Ki_z", pid_z.i, 0.0);
+    tp_nh.param<double>("Kd_z", pid_z.d, 1.2);
 
-    nh_private.param<double>("Kp_yaw", pid_yaw.p, 2.0);
-    nh_private.param<double>("Ki_yaw", pid_yaw.i, 0.0);    
-    nh_private.param<double>("Kd_yaw", pid_yaw.d, 1.2);
+    tp_nh.param<double>("Kp_yaw", pid_yaw.p, 2.0);
+    tp_nh.param<double>("Ki_yaw", pid_yaw.i, 0.0);    
+    tp_nh.param<double>("Kd_yaw", pid_yaw.d, 1.2);
 
-    nh_private.param<float>("maxVelocity_x", maxVelocity_x, 0.6);
-    nh_private.param<float>("maxVelocity_y", maxVelocity_y, 0.6);
-    nh_private.param<float>("maxVelocity_z", maxVelocity_z, 0.6);
-    nh_private.param<float>("maxVelocity_yaw", maxVelocity_yaw, 1.4);
+    tp_nh.param<float>("maxVelocity_x", maxVelocity_x, 0.6);
+    tp_nh.param<float>("maxVelocity_y", maxVelocity_y, 0.6);
+    tp_nh.param<float>("maxVelocity_z", maxVelocity_z, 0.6);
+    tp_nh.param<float>("maxVelocity_yaw", maxVelocity_yaw, 1.4);
 
-    nh_private.param<double>("init_takeoff_z", init_takeoff_z, 0.5);    // 无人机的 起飞高度 
+    tp_nh.param<double>("init_takeoff_z", init_takeoff_z, 0.5);    // 无人机的 起飞高度 
 
     ROS_INFO_STREAM( "param /uav_ctrl/x_Kp = " << pid_x.p );
     ROS_INFO_STREAM( "param /uav_ctrl/x_Ki = " << pid_x.i );
@@ -234,34 +255,34 @@ uavControl::uavControl(const ros::NodeHandle &nh_, const ros::NodeHandle &nh_pri
 
     // ROS sub pub
     // mavros uav state & control
-    state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &uavControl::state_cb,this);
+    state_sub = mavros_nh.subscribe<mavros_msgs::State>("state", 10, &uavControl::state_cb,this);
     /*Change Arming status. */
-    arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
+    arming_client = mavros_nh.serviceClient<mavros_msgs::CommandBool>("cmd/arming");
     /*Set FCU operation mode*/
-    set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+    set_mode_client = mavros_nh.serviceClient<mavros_msgs::SetMode>("set_mode");
 
     // mavros 位置 速度 state
     /*Local position from FCU. ENU坐标系(惯性系)*/ 
-    currentPose_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10,&uavControl::currentPose_cb,this); 
-    currentVelocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 10, &uavControl::currentVelocity_cb,this);
+    currentPose_sub = mavros_nh.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 10,&uavControl::currentPose_cb,this); 
+    currentVelocity_sub = mavros_nh.subscribe<geometry_msgs::TwistStamped>("local_position/velocity_local", 10, &uavControl::currentVelocity_cb,this);
 
     // 控制指令
     /*Local frame setpoint position. ENU坐标系(惯性系)*/ 
-    setVelocity_pub = nh.advertise<geometry_msgs::TwistStamped>("mavros/setpoint_velocity/cmd_vel",5); 
-    setPosition_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local",5);
+    setVelocity_pub = mavros_nh.advertise<geometry_msgs::TwistStamped>("setpoint_velocity/cmd_vel",5); 
+    setPosition_pub = mavros_nh.advertise<geometry_msgs::PoseStamped>("setpoint_position/local",5);
 
     
     /*订阅位置 设置消息*/
     // 无人机位置控制 [期望的位置]
-    targetPosition_sub = nh.subscribe<geometry_msgs::Point>("/desired/setTarget_position", 5, &uavControl::targetPosition_cb,this);
-    targetPose_sub = nh.subscribe<geometry_msgs::Pose>("/desired/setTarget_pose", 5, &uavControl::targetPose_cb,this);
-    targetVel_sub = nh.subscribe<geometry_msgs::TwistStamped>("/desired/setVel", 5, &uavControl::targetVel_cb,this);
+    targetPosition_sub = desired_nh.subscribe<geometry_msgs::Point>("setTarget_position", 5, &uavControl::targetPosition_cb,this);
+    targetPose_sub = desired_nh.subscribe<geometry_msgs::Pose>("setTarget_pose", 5, &uavControl::targetPose_cb,this);
+    targetVel_sub = desired_nh.subscribe<geometry_msgs::TwistStamped>("setVel", 5, &uavControl::targetVel_cb,this);
 
     // mavcomm_changestate - 通过 widget_console 直接切换飞机状态 
-    ChangeState_sub = nh.subscribe<mavcomm_msgs::ChangeState>("/mavcomm/receive/changestate", 10, &uavControl::ChangeState_cb,this);
+    ChangeState_sub = mavcomm_nh.subscribe<mavcomm_msgs::ChangeState>("receive/changestate", 10, &uavControl::ChangeState_cb,this);
 
     // 发布无人机状态 待其他程序调用
-    mavCurrentState_pub = nh.advertise<std_msgs::UInt8>("/mavcomm/uav_state_machine", 1);
+    mavCurrentState_pub = gen_nh.advertise<std_msgs::UInt8>("ctrl/uav_state_machine", 1);
 
 }
 
@@ -507,7 +528,7 @@ void uavControl::start()
                 setVelocity.twist.linear.x = satfunc(targetVel.twist.linear.x , maxVelocity_x);
                 setVelocity.twist.linear.y = satfunc(targetVel.twist.linear.y , maxVelocity_y);
                 setVelocity.twist.linear.z = satfunc(targetVel.twist.linear.z , maxVelocity_z);
-
+                // yaw
                 setVelocity.twist.angular.z = satfunc(targetVel.twist.angular.z , maxVelocity_yaw);
 
                 setVelocity_pub.publish(setVelocity);
@@ -708,6 +729,7 @@ int main(int argc, char **argv)
     
     ros::NodeHandle nh_("");
     ros::NodeHandle nh_private_("~");
+
     uavControl uav(nh_,nh_private_);
 
     uav.waitConnect();

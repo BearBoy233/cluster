@@ -1,4 +1,4 @@
-// Function: 自定义Mavlink消息 MAVCOMM 与 ROS 话题之间转换 
+// Function: 自定义 Mavlink 消息 MAVCOMM 与 ROS 话题之间转换 
 // supported P900 - ATS153=1 - in [p2m] OR [Mesh] mode
 // TODO Add UDP & TCP support
 // TODO Add group support
@@ -13,7 +13,7 @@
 
 #include <mavlink/mavcomm/mavlink.h>	// Mavlink Customize
 
-// ROS msg
+// ROS msg 
 // adding
 // #include <mavcomm_msgs/XXXX.h>
 #include <mavcomm_msgs/Heartbeat.h>
@@ -29,6 +29,14 @@
 #include <mavcomm_msgs/mission_info.h>
 #include <mavcomm_msgs/mission_back_info.h>
 #include <mavcomm_msgs/mission_set.h>
+
+// only for sim
+#include <mavcomm_msgs/Mavlink.h>
+
+// for sim
+int flag_sim_1s_2m = 0	;	// 仿真测试 标志
+
+
 
 //-------------------------------------------------------------------------------
 // Test Print flag
@@ -504,8 +512,32 @@ int main(int argc, char *argv[])
 	ros::init(argc, argv, "mavcomm");
 
 	ros::NodeHandle nh("~");
-    ros::NodeHandle nh_pub("mavcomm/receive"); // /mavcomm/receive");
-    ros::NodeHandle nh_sub("mavcomm/send"); // /mavcomm/send");
+
+	// load param 
+	// 真机实验部分 
+	nh.param<std::string>("serial_port", serial_port, "/dev/ttyUSB0");
+	nh.param<int>("serial_baudrate", serial_baudrate, 57600);
+	nh.param<int>("my_id", my_id, 100);					// 本机编号 	[ 100-地面站 ] 	[99-所有无人机]		
+	nh.param<int>("Flag_1ShowRn", Flag_1ShowRn, 0);  	// 1将接收到的字节打印到屏幕上 2同时打印 Byte
+	nh.param<int>("Flag_ats153", Flag_ats153, 0);  		// 0-没有前端 1-有10byte前端 
+	// 		   01 00     2d  00    00 f0 49 00 ac e3 + data
+	//10 byte 包字节数   RSSI 0x00  MAC
+    std::cout << "mavcomm/serial_port = " << serial_port << std::endl;
+    std::cout << "mavcomm/serial_baudrate = " << serial_baudrate << std::endl;
+	std::cout << "mavcomm/my_id = " << my_id << std::endl;
+	std::cout << "mavcomm/Flag_1ShowRn = " << Flag_1ShowRn << std::endl;
+    std::cout << "mavcomm/Flag_ats153 = " << Flag_ats153 << std::endl;
+
+	// 主要用于仿真测试
+	nh.param<int>("flag_sim_1s_2m", flag_sim_1s_2m, 0);
+
+	std::cout << std::endl << "flag_sim_1s_2m = " << flag_sim_1s_2m << std::endl;
+
+	// if (flag_sim_1s_2m == 0)
+	// {
+    	ros::NodeHandle nh_pub("mavcomm/receive"); // /mavcomm/receive");
+    	ros::NodeHandle nh_sub("mavcomm/send"); // /mavcomm/send");
+	// }
 
     // ROS pub
 	// Adding e,g.
@@ -578,19 +610,6 @@ int main(int argc, char *argv[])
 
 	//Responds to early exits signaled with Ctrl-C. 
 	signal(SIGINT, quit_handler);
-
-	nh.param<std::string>("serial_port", serial_port, "/dev/ttyUSB0");
-	nh.param<int>("serial_baudrate", serial_baudrate, 57600);
-	nh.param<int>("my_id", my_id, 100);		// 本机编号 	[ 100-地面站 ] 	[99-所有无人机]		
-	nh.param<int>("Flag_1ShowRn", Flag_1ShowRn, 0);  // 1将接收到的字节打印到屏幕上 2同时打印 Byte
-	nh.param<int>("Flag_ats153", Flag_ats153, 0);  // 0-没有前端 1-有10byte前端 
-	// 		   01 00     2d  00    00 f0 49 00 ac e3 + data
-	//10 byte 包字节数   RSSI 0x00  MAC
-    std::cout << "mavcomm/serial_port = " << serial_port << std::endl;
-    std::cout << "mavcomm/serial_baudrate = " << serial_baudrate << std::endl;
-	std::cout << "mavcomm/my_id = " << my_id << std::endl;
-	std::cout << "mavcomm/Flag_1ShowRn = " << Flag_1ShowRn << std::endl;
-    std::cout << "mavcomm/Flag_ats153 = " << Flag_ats153 << std::endl;
 
 	ros::Rate loop_rate(50);
 
@@ -682,7 +701,9 @@ void handle_recieve_msg_ats153_type3()
 			uint8_t temp_mac[6];
 
 			if ( (Rbuffer_rx[3+cur_rn] == 0x00) && 
-			     ( (Rbuffer_rx[0+cur_rn] == 0x00) || ( (Rbuffer_rx[0+cur_rn] == 0x01)&&(Rbuffer_rx[1+cur_rn] == 0x00) ) )  )
+			     ( (Rbuffer_rx[0+cur_rn] == 0x00) || 
+				 ( (Rbuffer_rx[0+cur_rn] == 0x01) && 
+				   (Rbuffer_rx[1+cur_rn] == 0x00) ) ) )
  			{ 	// 帧头格式符合
 				temp_Rn = ((int)Rbuffer_rx[0+cur_rn]) * ((int)0xFF) + ((int)Rbuffer_rx[1+cur_rn]);	//数据包长
 				temp_RSSI = (int)Rbuffer_rx[2+cur_rn];	// RSSI

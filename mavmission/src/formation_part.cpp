@@ -469,11 +469,10 @@ int Formation_part::formation_ctrl_all(int switch_group_id)
 
     // 切入编队模式
     if ( current_formation_state != FORMATION_STATE_RUNNING )
-    {   
+    {   // 
 
 
     } 
-
 
 }
 
