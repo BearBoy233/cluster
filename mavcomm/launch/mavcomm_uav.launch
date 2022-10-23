@@ -1,7 +1,7 @@
 
 <launch>
     <!-- vim: set ft=xml noet : -->
-    <!-- mavcomm uav node launch file-->
+    <!-- mavcomm uav node launch file -->
     <!-- mavcomm param -->
     <arg name="serial_port" default="/dev/ttyUSB0" />
     <arg name="baudrate" default="115200" />
