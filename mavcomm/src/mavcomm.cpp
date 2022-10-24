@@ -256,15 +256,22 @@ void cb_sub_mission_set(const mavcomm_msgs::mission_set::ConstPtr& rmsg)
 /* 构造函数 初始化参数 */
 uavComm::uavComm( 
     const ros::NodeHandle &nh_pub_, 
-    const ros::NodeHandle &nh_sub_ )
+    const ros::NodeHandle &nh_sub_,
+	const ros::NodeHandle &nh_sim_)
 :nh_pub(nh_pub_),
  nh_sub(nh_sub_),
+ nh_sim(nh_sim_),
     tp_nh("~"),             // param    /uav_mission/xxx
     mavcomm_nh("mavcomm"),  // mavcomm  /mavcomm/XXX   pub&sub
     mavros_nh("mavros"),    // mavros   /mavros/XXX
     desired_nh("desired"),  // desired  /desired/XXX
     gen_nh("gen")           // desired  /desired/XXX 
 {
+	// sim part 
+	pub_sim = nh_sim.advertise<mavcomm_msgs::serial_data>("all", 100);
+	sub_sim = nh_sim.subscribe<mavcomm_msgs::serial_data>("all", 100, cb_sub_sim);
+	
+
 	// ROS pub
 	// Adding e,g.
 	// pub_XXXX = nh_pub.advertise<mavcomm_msgs::XXXX>("XXXX", 5);
@@ -342,8 +349,8 @@ uavComm::~uavComm()
     // delete rate;
 }
 
-
-void mavcomm_run(int flag)
+// 真机
+void mavcomm_run()
 {
 	//串口serial设置&开启
 	serial_set_open();
@@ -397,11 +404,75 @@ void mavcomm_run(int flag)
 		loop_rate->sleep();
 	}
 
-	//关闭串口s
+	// 关闭 串口 s
     SerialPoint.close();
 
 	// return 0;
 
+}
+
+// 仿真 解析 （回调函数)
+void cb_sub_sim(const mavcomm_msgs::serial_data::ConstPtr& rmsg)
+{	
+	std::cout << "test1" << std::endl;
+
+	if (rmsg->send_id == my_id)
+	{	// 本机 放弃
+		if (Flag_1ShowRn) {
+			std::cout << "mavlink from this drone " << std::endl;	
+		}
+
+		std::cout << "test2" << std::endl;
+	}
+	else
+	{
+		std::cout << "test3" << std::endl;
+
+		// 非 本机 => 解析
+		bool success;   //mavlink 信息正确标志
+		// 无附加帧头的情况， 直接给 mavlink 解析去
+		//   字节解析Message
+		for (int i = 0; i < rmsg->len; i++) {	
+			mavlink_message_t mmsg;		//解包后得到的消息包
+			// const mavlink_message_t *mmsg;
+			success = read_buffer(mmsg, rmsg->payload8[i] & 0xff);
+			if (success) 
+			{ 
+				if (Flag_1ShowRn) {
+			    	std::cout << "Receive a complete Mavlink message. No = "  << mmsg.msgid << std::endl;	
+				}
+
+				//  消息时所有无人机接收 / 消息时本机接收的 / 本机是地面站
+				if ( (mmsg.compid == ID_ALL) || (mmsg.compid == my_id) ) // || (my_id == ID_GCS) 
+				{						
+		        	// 此处解析消息类型 并 pub
+		        	//  QQQ
+                	publish_mavcomm_recieve(mmsg);  //读取并转化为rostopic pub出去
+		        	// mavlink_pub_cb(&mmsg);	//读取并转化为rostopic pub出去
+		    	}
+			}
+		}
+	}
+}
+
+// 仿真
+void mavcomm_run_sim()
+{
+    // 等待
+	// ros::Duration ( 0.5 );
+	ros::spin();	// 回调在 loop_rate.sleep() 前后 ?
+	/*
+	while ( ros::ok() )
+	{	
+		// 直接回调了     
+    	//  此处处理需要通过串口发送出去的数据
+     	ros::spinOnce();	// 回调在 loop_rate.sleep() 前后 ?	
+		loop_rate->sleep();
+	}
+	*/
+	//关闭串口s
+    // SerialPoint.close();
+	// return 0;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -437,18 +508,25 @@ int main(int argc, char *argv[])
 
 	loop_rate = new ros::Rate( 50.0 );
 
+    ros::NodeHandle nh_pub("mavcomm/receive");		// /mavcomm/receive");
+	ros::NodeHandle nh_sub("mavcomm/send"); 		// /mavcomm/send");
+
+	ros::NodeHandle nh_sim("/sim/mavcomm"); 	// /mavcomm/sim");
+
+	uavComm uavmavcomm(nh_pub, nh_sub, nh_sim);
+
 	// 真机 	
 	if (flag_sim_1s_2m == 0)
 	{
-    	ros::NodeHandle nh_pub("mavcomm/receive");		// /mavcomm/receive");
-    	ros::NodeHandle nh_sub("mavcomm/send"); 		// /mavcomm/send");
-
-		uavComm uavmavcomm(nh_pub, nh_sub);
-
-		mavcomm_run(flag_sim_1s_2m);
-
+		mavcomm_run();
 	}
-
+	// 仿真
+	else if (flag_sim_1s_2m > 0)
+	{
+		mavcomm_run_sim();
+		// 将串口发送的端口 转化为 一个通用的 sim topic 并去订阅
+		// mavcomm_run(flag_sim_1s_2m);
+	}
 
 	return 0;
 
@@ -659,8 +737,27 @@ void send_buffer(mavlink_message_t* mmsg)
 	unsigned len;
 	len  = mavlink_msg_to_send_buffer((uint8_t*)Wbuffer_tx, mmsg);
 
-	// Write buffer to serial port
-	SerialPoint.write(Wbuffer_tx, len);
+	// 
+	if ( flag_sim_1s_2m == 0 )
+	{	
+		// 硬件发送
+		// Write buffer to serial port
+		SerialPoint.write(Wbuffer_tx, len);
+	}
+	else 
+	{	
+		// 仿真 sim 发送
+		msg_pub_sim.len = len;
+		msg_pub_sim.send_id = my_id;
+		msg_pub_sim.payload8.clear(); 
+
+		for (int i=0; i<len; i++)
+		{
+			msg_pub_sim.payload8.push_back( Wbuffer_tx[i] );
+		}
+
+		pub_sim.publish(msg_pub_sim);
+	}
 
 	// sys_trans_data.send_KB = sys_trans_data.send_KB + ((double)len)/1024;
 	

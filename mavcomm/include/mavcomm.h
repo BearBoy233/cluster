@@ -33,6 +33,7 @@
 
 // only for sim
 #include <mavcomm_msgs/Mavlink.h>
+#include <mavcomm_msgs/serial_data.h>
 // for sim flag
 int flag_sim_1s_2m = 0;	// 仿真测试 标志
 
@@ -42,7 +43,8 @@ public :
 
     uavComm( 
     const ros::NodeHandle &nh_pub_, 
-    const ros::NodeHandle &nh_sub_
+    const ros::NodeHandle &nh_sub_,
+	const ros::NodeHandle &nh_sim_
     );
 
     ~uavComm();
@@ -50,6 +52,7 @@ public :
     // ROS part
     ros::NodeHandle nh_pub;
     ros::NodeHandle nh_sub;
+    ros::NodeHandle nh_sim;
 
     // 用于 订阅 发布 param读取
     ros::NodeHandle tp_nh;
@@ -75,7 +78,19 @@ int my_id;			// my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
 
 ros::Rate *loop_rate;
 
-void mavcomm_run(int flag);
+// 真机运行
+void mavcomm_run();
+// 仿真运行
+void mavcomm_run_sim();
+
+
+// pub
+ros::Publisher 			    pub_sim;
+mavcomm_msgs::serial_data   msg_pub_sim;
+ros::Subscriber 		    sub_sim;
+mavcomm_msgs::serial_data   msg_sub_sim;
+void cb_sub_sim(const mavcomm_msgs::serial_data::ConstPtr& rmsg);
+
 
 //-------------------------------------------------------------------------------
 // 串口相关

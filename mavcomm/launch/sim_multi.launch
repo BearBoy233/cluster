@@ -1,0 +1,45 @@
+
+<launch>
+    <!-- vim: set ft=xml noet : -->
+
+    <group ns="uav0">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="0" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+    <group ns="uav1">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="1" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+    <group ns="uav2">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="2" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+    <group ns="gcs">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="100" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+</launch>

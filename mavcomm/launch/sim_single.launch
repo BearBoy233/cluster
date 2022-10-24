@@ -1,0 +1,26 @@
+
+<launch>
+    <!-- vim: set ft=xml noet : -->
+    <!-- Packet loss and rate testing launch file-->
+    <!-- UAV0 -->
+    <group ns="uav0">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="0" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+    <group ns="gcs">
+	<!-- mavcomm -->
+	<node pkg="mavcomm" type="mavcomm" name="mavcomm" output="screen" respawn="false"> 
+          <!-- common param -->          
+          <param name="my_id"     	value="100" />
+          <param name="Flag_1ShowRn"    value="2" />	  
+          <param name="flag_sim_1s_2m"  value="1" />
+        </node>
+    </group>
+
+</launch>

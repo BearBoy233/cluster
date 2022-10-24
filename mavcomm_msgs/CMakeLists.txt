@@ -11,6 +11,8 @@ add_message_files(
   FILES
 
   Mavlink.msg
+  serial_data.msg
+
   Heartbeat.msg
   Console.msg
   Console_monitor.msg
