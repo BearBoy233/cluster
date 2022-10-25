@@ -2,7 +2,7 @@
   
 // 编队 队形设置、编队飞行
 
-// #pragma once
+// #program once
 // #ifndef 
 
 #include <com_define.h>
@@ -78,13 +78,22 @@ private:
         // 无人机N的 编队偏置量
         double offset_x;
         double offset_y;
-        double offset_z;
-        double offset_yaw;
+        double offset_z;    // 暂时只考虑 [z相同]    
+        double offset_yaw;  // 
 
+        // 编队 标志位
         uint8_t flag;   
         // TBE
         // h7-l0
-        // 7 - leader_flag
+        // 7 - leader_flag  置0 丛机
+        //                  置1 领机 [一个编队 当前有且仅能有 1个leader]
+        // 6 - yaw_leader   置0 yaw偏置相对ENU惯性系 
+        //                  置1 yaw偏置相对leader   
+
+        // 1 - form_in_turn 置0 直接按offset形成编队 [也不怎么推荐-无避障]
+        //                  置1 一架架，依次形成编队
+        // 0 - form_direct  置0 直接编队算法 [不推荐-无避障]
+        //                  置1 先形成编队，之再编队算法 [看 flag 4]
 
         bool flag_this_group;   // 是否是本组的 - check 里赋值
         bool flag_set;          // 是否已经设置了 - init 里=0

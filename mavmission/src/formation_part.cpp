@@ -78,7 +78,7 @@ void Formation_part::formation_init()
     current_group = -1;
 
     // 编队偏差
-    for (int i=0;i<NNN;i++)
+    for (int i=0; i<NNN; i++)
     { 
         // 邻居无人机位置相关
         neighbor_loc_pos_ENU[i].flag_update = 0;
@@ -108,7 +108,7 @@ void Formation_part::formation_init()
 
 //-------------------------------------------------
 //                                  px4 mavros 订阅
-//-------------------------------------------------u
+//-------------------------------------------------
 // 话题订阅     | mavros/local_pose/pose
 void Formation_part::this_uav_px4_local_position_pose_cb
     (const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -481,7 +481,8 @@ int Formation_part::formation_ctrl_all(int switch_group_id)
 // 直接给速度指令?
 // 保持 keep_d_z keep_d_yaw
 void Formation_part::formation_ctrl_first_order_PID_xy
-    (float keep_d_z, float keep_d_yaw, geometry_msgs::TwistStamped *cal_ctrl_set_vel)    
+    (float keep_d_z, float keep_d_yaw, 
+    geometry_msgs::TwistStamped *cal_ctrl_set_vel)    
     // keep_d_yaw = Mission_pose_current.orientation.w;
 {
     // Init

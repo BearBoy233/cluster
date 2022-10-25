@@ -3,7 +3,6 @@
 //      => 需要 在 mavcomm 中增加 group 的 判断 & 设置
 //      部分可参考 formation 中 分组编队的设置
 
-
 #include <mission.h>
 
 using namespace mav_mission;
