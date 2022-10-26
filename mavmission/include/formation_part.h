@@ -18,7 +18,7 @@
 #include <mavcomm_msgs/formation_back_info.h>
 #include <mavcomm_msgs/formation_set.h>
 
-
+// 编队模式 切换 状态 指令
 enum ENUM_INFO_FORMATION {
     FORMATION_INFO_NAN = 0,
     FORMATION_INFO_SET_INIT,
@@ -26,15 +26,16 @@ enum ENUM_INFO_FORMATION {
     FORMATION_INFO_RUN      // 仅供测试用,正常直接调用
 };
 
+// 编队模式 当前此模块的状态
 enum ENUM_STATE_FORMATION {
     FORMATION_STATE_NAN = 0,
-
+    // 设置
     FORMATION_STATE_SETTING,
-
+    // 校准
     FORMATION_STATE_CHECKING,
     FORMATION_STATE_CHECKED,
     FORMATION_STATE_CHECK_FAIL,
-
+    // 编队执行
     FORMATION_STATE_RUN_FORMING,
     FORMATION_STATE_RUNNING,
     FORMATION_STATE_RUN_FAIL
@@ -68,6 +69,7 @@ private:
     enum ENUM_STATE_FORMATION current_formation_state; // 当前的编队模块状态
     
     int current_group;  // TBU 当前使用的编队阵型 
+    int last_group;     // 上一个 编队阵型 
 
     // 编队阵型信息存储
     // 支持分组编队
@@ -93,7 +95,7 @@ private:
         // 1 - form_in_turn 置0 直接按offset形成编队 [也不怎么推荐-无避障]
         //                  置1 一架架，依次形成编队
         // 0 - form_direct  置0 直接编队算法 [不推荐-无避障]
-        //                  置1 先形成编队，之再编队算法 [看 flag 4]
+        //                  置1 先形成编队，之再编队算法 [看 flag 1]
 
         bool flag_this_group;   // 是否是本组的 - check 里赋值
         bool flag_set;          // 是否已经设置了 - init 里=0
@@ -136,7 +138,8 @@ private:
     };
 
     // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
-    int formation_ctrl_all(int switch_group_id);
+    // keep_z & keep_h 不变
+    int formation_ctrl_all(int switch_group_id, float keep_z, float keep_h);
     
     // 分布式 编队控制算法 type1
     // leader 自己飞
@@ -230,6 +233,10 @@ public:
     ros::Subscriber this_uav_px4_local_position_velocity_local_sub;
     void this_uav_px4_local_position_velocity_local_cb(const geometry_msgs::TwistStamped::ConstPtr &msg);
     geometry_msgs::TwistStamped currentVelocity;
+
+    // px4 mavros 消息订阅 vel 速度 mavros/local_position/velocity_local
+    ros::Publisher this_uav_px4_setVelocity_pub;    // 设置速度
+
 
 };
 }

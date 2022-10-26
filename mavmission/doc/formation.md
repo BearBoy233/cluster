@@ -11,7 +11,7 @@
 
 ```
   编队阵型设置 (gcs->uav)
-  编队控制 
+  编队控制(/mavros/setpoint_velocity)
 ```
 
 - [一致性编队控制算法(一阶)]
@@ -124,4 +124,31 @@ Note over gcs, uavN : 等待编队飞行
 ```
 
 
+#### formation_ctrl_all(执行编队流程)
+
+```Mermaid
+
+stateDiagram-v2
+
+[*] --> 初始化 : FORMATION_STATE_RUN_FORMING
+
+初始化 --> 编队阵型形成 : formation_array[NNN][FORMATION_GROUP_PPP].flag
+
+编队阵型形成 --> 分布式编队算法 : flag[0]=0
+
+编队阵型形成 --> 按照offset形成编队 : flag[0]=1&flag[1]=0
+
+编队阵型形成 --> 按照offset，一架架依次形成编队 : flag[0]=1&flag[1]=1
+
+按照offset形成编队 --> 分布式编队算法
+
+按照offset，一架架依次形成编队 --> 分布式编队算法
+
+分布式编队算法 --> 编队阵型形成 : 编队队形切换
+
+分布式编队算法 --> 任务完成 : (TODO)安全解散
+
+任务完成 --> [*]
+
+```
 

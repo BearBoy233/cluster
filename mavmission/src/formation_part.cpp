@@ -69,6 +69,10 @@ Formation_part::Formation_part():
     this_uav_px4_local_position_velocity_local_sub = mavros_nh.subscribe<geometry_msgs::TwistStamped>
         ("local_position/velocity_local", 1, &Formation_part::this_uav_px4_local_position_velocity_local_cb, this);
 
+    // px4 mavros 消息发布
+    // 控制指令
+    /* Local frame setpoint position. ENU坐标系(惯性系) */ 
+    this_uav_px4_setVelocity_pub = mavros_nh.advertise<geometry_msgs::TwistStamped>("setpoint_velocity/cmd_vel",5);
 }
 
 // 数值 初始化
@@ -76,6 +80,7 @@ void Formation_part::formation_init()
 {
     // TBC
     current_group = -1;
+    last_group = -1;
 
     // 编队偏差
     for (int i=0; i<NNN; i++)
@@ -459,11 +464,41 @@ void Formation_part::pubfunc_formation_back_info
 //-------------------------------------------------
 // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
 // switch_group_id 需要切换到的 group_id
-int Formation_part::formation_ctrl_all(int switch_group_id)
+// return -1 返回 bug
+
+// keep_z & keep_h 不变
+int Formation_part::formation_ctrl_all
+    (int switch_group_id, float keep_z, float keep_h)
 {
-    // 先判断能否进入 
+    // 判断进入何种编队模式 
+    int state_formation_ctrl_all = -1;
+    // mavros/cmd_vel 指令
+    geometry_msgs::TwistStamped d_cal_ctrl_set_vel;
+
+    // 1 判断 switch_group_id 是否不一样了 (有的话需要切换)
+    // 2 判断 当前所处的 formation 模式 （不是运行中的话也需要切换）
+    // 3 leader 区分 TODO
+
+    // 当前 编队 group_id 没变
+    if ( switch_group_id == current_group
+        && current_formation_state == FORMATION_STATE_RUNNING )
+    {
+        state_formation_ctrl_all = 1;
+        formation_ctrl_first_order_PID_xy(keep_z, keep_h, &d_cal_ctrl_set_vel);
+        // 输出
+        this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
+    }
+    else 
+    if ( current_formation_state == FORMATION_STATE_RUN_FAIL )
+    {
+
+
+
+    }
+
     if ( current_formation_state == FORMATION_STATE_RUN_FAIL )
     {   // 正常不应该到这的
+        // 为何进入 & 如何解决 & 报错原因
         return -1;
     }
 
@@ -506,12 +541,15 @@ void Formation_part::formation_ctrl_first_order_PID_xy
         {
             num_count = num_count + 1;
             // x
-            delta_enu_x = delta_enu_x + neighbor_loc_pos_ENU[i].x - formation_array[i][current_group].offset_x;
+            delta_enu_x = delta_enu_x + neighbor_loc_pos_ENU[i].x 
+                        - formation_array[i][current_group].offset_x;
             // y
-            delta_enu_y = delta_enu_y + neighbor_loc_pos_ENU[i].y - formation_array[i][current_group].offset_y;
+            delta_enu_y = delta_enu_y + neighbor_loc_pos_ENU[i].y 
+                        - formation_array[i][current_group].offset_y;
 
             // std::cout << "i=" << i << ", num_count=" << num_count;
-            // std::cout << "delta_enu_x=" << delta_enu_x << ", delta_enu_y=" << delta_enu_y << std::endl;
+            // std::cout << "delta_enu_x=" << delta_enu_x << ", delta_enu_y=" 
+            //           << delta_enu_y << std::endl;
         }
     }
     
@@ -524,8 +562,10 @@ void Formation_part::formation_ctrl_first_order_PID_xy
     }
     else
     {
-        delta_enu_x = delta_enu_x/num_count - currentPose.pose.position.x + formation_array[my_id][current_group].offset_x; 
-        delta_enu_y = delta_enu_y/num_count - currentPose.pose.position.y + formation_array[my_id][current_group].offset_y;
+        delta_enu_x = delta_enu_x/num_count - currentPose.pose.position.x 
+                    + formation_array[my_id][current_group].offset_x; 
+        delta_enu_y = delta_enu_y/num_count - currentPose.pose.position.y 
+                    + formation_array[my_id][current_group].offset_y;
     }
 
     // keep z
