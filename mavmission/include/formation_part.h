@@ -2,6 +2,8 @@
   
 // 编队 队形设置、编队飞行
 
+// TODO yaw 保持为飞机当亲飞行方向
+
 // #program once
 // #ifndef 
 
@@ -41,6 +43,20 @@ enum ENUM_STATE_FORMATION {
     FORMATION_STATE_RUN_FAIL
 };
 
+// 编队模式 formation_ctrl_all_follower 返回的控制状态
+enum ENUM_STATE_CTRL_FORMATION {
+    FORMATION_CTRL_STATE_NAN = 0,
+    // 
+    FORMATION_CTRL_STATE_formation_forming,
+    // 进入 编队 模式失败
+    FORMATION_CTRL_STATE_unable_enter_formation,
+
+    // 实际控制算法
+    // 分布式 一阶编队控制算法
+    FORMATION_CTRL_STATE_follower_distributed_1st_order,
+
+};
+
 namespace mav_mission {
 
 class Formation_part{
@@ -48,6 +64,12 @@ class Formation_part{
 public:
 	Formation_part();
 	~Formation_part() {};
+
+    // 获取 某一状态值 
+    // current_formation_state
+    enum ENUM_STATE_FORMATION get_current_formation_state()
+    {    return current_formation_state; 
+    };
 
 private:
     // 用于 订阅 发布 param读取
@@ -84,6 +106,7 @@ private:
         double offset_yaw;  // 
 
         // 编队 标志位
+        // 同组中的 flag是一致的 (除了 leader)
         uint8_t flag;   
         // TBE
         // h7-l0
@@ -139,7 +162,7 @@ private:
 
     // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
     // keep_z & keep_h 不变
-    int formation_ctrl_all(int switch_group_id, float keep_z, float keep_h);
+    int formation_ctrl_all_follower(int switch_group_id, float keep_z, float keep_h);
     
     // 分布式 编队控制算法 type1
     // leader 自己飞

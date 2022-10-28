@@ -360,7 +360,6 @@ void Formation_part::check_formation_group_setting
             check_setbit_2
             );
 
-
     } else {
         // 无人机组数 与设置的不符合
         current_formation_state = FORMATION_STATE_CHECK_FAIL;
@@ -425,7 +424,6 @@ void Formation_part::pubfunc_F_formation_back_info
     break;
     }
 
-    
     // common ID
     msg_formation_back_info.sysid = my_id;
     msg_formation_back_info.compid = receive_id;
@@ -462,53 +460,87 @@ void Formation_part::pubfunc_formation_back_info
 //-------------------------------------------------
 //                                      编队控制算法
 //-------------------------------------------------
+// follower
 // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
 // switch_group_id 需要切换到的 group_id
 // return -1 返回 bug
 
 // keep_z & keep_h 不变
-int Formation_part::formation_ctrl_all
+int Formation_part::formation_ctrl_all_follower
     (int switch_group_id, float keep_z, float keep_h)
 {
     // 判断进入何种编队模式 
-    int state_formation_ctrl_all = -1;
+    int state_formation_ctrl_all = FORMATION_CTRL_STATE_NAN;
     // mavros/cmd_vel 指令
     geometry_msgs::TwistStamped d_cal_ctrl_set_vel;
 
     // 1 判断 switch_group_id 是否不一样了 (有的话需要切换)
     // 2 判断 当前所处的 formation 模式 （不是运行中的话也需要切换）
-    // 3 leader 区分 TODO
-
-    // 当前 编队 group_id 没变
-    if ( switch_group_id == current_group
-        && current_formation_state == FORMATION_STATE_RUNNING )
+    
+    // 当前 1编队group_id没变 
+    if ( switch_group_id == current_group)
     {
-        state_formation_ctrl_all = 1;
-        formation_ctrl_first_order_PID_xy(keep_z, keep_h, &d_cal_ctrl_set_vel);
-        // 输出
-        this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
+        // 当前 2已经处于分布式编队控制状态了
+        if ( current_formation_state == FORMATION_STATE_RUNNING )
+        {            
+            formation_ctrl_first_order_PID_xy(keep_z, keep_h, &d_cal_ctrl_set_vel);
+            // 输出
+            this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
+
+            // 分布式 一阶编队控制算法
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_follower_distributed_1st_order;
+            return state_formation_ctrl_all;
+        }
+
+        // 当前 2 正要形成编队
+        if ( current_formation_state == FORMATION_STATE_RUN_FORMING )
+        {
+            // 判断 当前 的 任务 模式 ??? 怎么形成编队
+            // 如果没有控制的话 需要保持悬停不动
+
+
+
+            
+
+        }
+
+        // 当前 2 无法进入编队
+        if ( current_formation_state == FORMATION_STATE_RUN_FAIL )
+        { 
+            // 不应该有这个模式 !!!
+        } 
+
     }
     else 
-    if ( current_formation_state == FORMATION_STATE_RUN_FAIL )
-    {
+    {   
+        // 当前 1编队group_id 改变了
+        // 判断能否切入 FORMATION_STATE_RUN_FORMING 模式
+        if ( current_formation_state == FORMATION_STATE_CHECKED || 
+             current_formation_state == FORMATION_STATE_RUN_FORMING || 
+             current_formation_state == FORMATION_STATE_RUNNING
+            )
+        {
+            // 切状态
+            last_group = current_group;
+            current_group = switch_group_id;
 
+            // 进入编队形成模式
+            current_formation_state = FORMATION_STATE_RUN_FORMING;
 
-
+            // 编队形成状态
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_forming;
+            return state_formation_ctrl_all;
+        }
+        else
+        {
+            // 正常不应该的
+            // 进入状态不对 有问题 !!!
+            // 进入 编队 模式失败
+            // 自行 访问 current_formation_state
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_unable_enter_formation;
+            return state_formation_ctrl_all;
+        }
     }
-
-    if ( current_formation_state == FORMATION_STATE_RUN_FAIL )
-    {   // 正常不应该到这的
-        // 为何进入 & 如何解决 & 报错原因
-        return -1;
-    }
-
-    // 切入编队模式
-    if ( current_formation_state != FORMATION_STATE_RUNNING )
-    {   // 
-
-
-    } 
-
 }
 
 
