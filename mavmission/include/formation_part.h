@@ -38,6 +38,7 @@ enum ENUM_STATE_FORMATION {
     FORMATION_STATE_CHECKED,
     FORMATION_STATE_CHECK_FAIL,
     // 编队执行
+    FORMATION_STATE_RUN_PREPARE,
     FORMATION_STATE_RUN_FORMING,
     FORMATION_STATE_RUNNING,
     FORMATION_STATE_RUN_FAIL
@@ -47,6 +48,7 @@ enum ENUM_STATE_FORMATION {
 enum ENUM_STATE_CTRL_FORMATION {
     FORMATION_CTRL_STATE_NAN = 0,
     // 
+    FORMATION_CTRL_STATE_formation_prepare,
     FORMATION_CTRL_STATE_formation_forming,
     // 进入 编队 模式失败
     FORMATION_CTRL_STATE_unable_enter_formation,
@@ -92,6 +94,10 @@ private:
     
     int current_group;  // TBU 当前使用的编队阵型 
     int last_group;     // 上一个 编队阵型 
+
+    // 获得当前编队模式的 flag
+    bool t_flag_form_direct;    // flag l0
+    bool t_flag_form_in_turn;   // flag l1
 
     // 编队阵型信息存储
     // 支持分组编队

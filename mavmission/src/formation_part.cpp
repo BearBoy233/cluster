@@ -480,7 +480,9 @@ int Formation_part::formation_ctrl_all_follower
     // 当前 1编队group_id没变 
     if ( switch_group_id == current_group)
     {
-        // 当前 2已经处于分布式编队控制状态了
+        //-------------------------------------------------------
+        // 实际控制
+        // 当前 2 已经处于分布式编队控制状态了
         if ( current_formation_state == FORMATION_STATE_RUNNING )
         {            
             formation_ctrl_first_order_PID_xy(keep_z, keep_h, &d_cal_ctrl_set_vel);
@@ -492,15 +494,64 @@ int Formation_part::formation_ctrl_all_follower
             return state_formation_ctrl_all;
         }
 
+        // ---------------------------------------------------------
         // 当前 2 正要形成编队
         if ( current_formation_state == FORMATION_STATE_RUN_FORMING )
+        {
+
+            if ( t_flag_form_direct == false )
+            {
+                // 1 - form_in_turn 置0 直接按offset形成编队 [也不怎么推荐-无避障]
+                // 根据 leader 的位置 飞到那里去
+                
+
+                
+            } 
+            else // 1 - form_in_turn 置1 一架架，依次形成编队
+            {
+                // 等待外部输入 
+                // 原地停止
+
+                // 向上 折线 ...
+
+            }
+
+        }
+
+        // ---------------------------------------------------------
+        // 当前 2 正要形成编队 抉择需要切换到的状态
+        if ( current_formation_state == FORMATION_STATE_RUN_PREPARE )
         {
             // 判断 当前 的 任务 模式 ??? 怎么形成编队
             // 如果没有控制的话 需要保持悬停不动
 
+            // 获得当前的 flag
+            t_flag_form_direct = formation_array[my_id][current_group].flag && 0b00000001;
+            t_flag_form_in_turn = formation_array[my_id][current_group].flag && 0b00000010;
+            std::cout << "my_id = " << my_id;
+            std::cout << ", t_flag_form_direct" << t_flag_form_direct;
+            std::cout << ", t_flag_form_in_turn" << t_flag_form_in_turn << std::endl;
 
+            if ( t_flag_form_direct == false )
+            {   
+                // 0 - form_direct  置0 直接编队算法 [不推荐-无避障]
+                formation_ctrl_first_order_PID_xy(keep_z, keep_h, &d_cal_ctrl_set_vel);
+                // 输出
+                this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
+                
+                // 切换模式 => 直接编队算法
+                state_formation_ctrl_all = FORMATION_STATE_RUNNING;
+                return state_formation_ctrl_all;
 
-            
+            }   
+            else // 0 - form_direct  置1 先形成编队，之再编队算法 [看 flag 1]
+            {
+                // 初值 赋值
+
+                // 切换模式 => 正要形成编队
+                state_formation_ctrl_all = FORMATION_STATE_RUN_FORMING;
+                return state_formation_ctrl_all;
+            }
 
         }
 
@@ -511,11 +562,12 @@ int Formation_part::formation_ctrl_all_follower
         } 
 
     }
-    else 
+    else // end if ( switch_group_id == current_group)
     {   
         // 当前 1编队group_id 改变了
         // 判断能否切入 FORMATION_STATE_RUN_FORMING 模式
         if ( current_formation_state == FORMATION_STATE_CHECKED || 
+             current_formation_state == FORMATION_STATE_RUN_PREPARE || 
              current_formation_state == FORMATION_STATE_RUN_FORMING || 
              current_formation_state == FORMATION_STATE_RUNNING
             )
@@ -525,10 +577,10 @@ int Formation_part::formation_ctrl_all_follower
             current_group = switch_group_id;
 
             // 进入编队形成模式
-            current_formation_state = FORMATION_STATE_RUN_FORMING;
+            current_formation_state = FORMATION_STATE_RUN_PREPARE;
 
             // 编队形成状态
-            state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_forming;
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_prepare;
             return state_formation_ctrl_all;
         }
         else
