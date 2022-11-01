@@ -92,12 +92,25 @@ private:
     // formation part
     enum ENUM_STATE_FORMATION current_formation_state; // 当前的编队模块状态
     
-    int current_group;  // TBU 当前使用的编队阵型 
-    int last_group;     // 上一个 编队阵型 
-
+    int current_group;              // TBU 当前使用的编队阵型
+    int current_group_leader_no;    // 当前 leader no 
+    int last_group;                 // 上一个 编队阵型 
+ 
     // 获得当前编队模式的 flag
     bool t_flag_form_direct;    // flag l0
     bool t_flag_form_in_turn;   // flag l1
+    
+    // 编队形成 目标 x-y-z-yaw
+    float form_forming_target_x;
+    float form_forming_target_y;
+    float form_forming_target_z;
+    float form_forming_target_yaw;  // 暂时忽略
+    // count 计数器
+    float form_forming_target_count;
+    // 计数 判断距离
+    float form_forming_target_distance_delta_xy = 0.5;
+    float form_forming_target_distance_delta_z = 0.5;
+    float form_forming_target_distance_delta_yaw = 0.0;   // 暂时忽略
 
     // 编队阵型信息存储
     // 支持分组编队
@@ -147,14 +160,15 @@ private:
         double z;
         double yaw;
 
-        bool flag_update;           // 是否更新 (和当前调用的时候比较？)
-        uint64_t last_msg_rec_time;
-        uint64_t cur_msg_rec_time;
+        bool flag_update;           // 是否更新标志位-无意义 后续完善 
+        uint64_t last_msg_rec_time; // 判断数据间隔 与 cur_msg_rec_time
+        uint64_t cur_msg_rec_time;  // cur_msg_rec_time 需要 和 当前调用的时候比较？
     } neighbor_loc_pos_ENU[NNN];    // 邻居无人机 位置信息
 
     int flag_nb_connect_first[NNN]; // 首次与邻居无人机连接 (之后断开不变)
     //TODO 参与编队的其他无人机 Num;
-    
+    uint64_t msg_rec_time_delta = 5000000;  // 5s
+
     // PID参数
     struct pid {
         double p = 0.0;
@@ -169,12 +183,20 @@ private:
     // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
     // keep_z & keep_h 不变
     int formation_ctrl_all_follower(int switch_group_id, float keep_z, float keep_h);
-    
+
+    // 从机
+
     // 分布式 编队控制算法 type1
     // leader 自己飞
     // 从机 一阶 分布式编队控制算法 xy
     void formation_ctrl_first_order_PID_xy
         (float keep_d_z, float keep_d_yaw, geometry_msgs::TwistStamped *cal_ctrl_set_vel);
+
+    // 编队形成过程
+    // 位置控制
+    void formation_ctrl_desired_pos_enu
+        (float desire_x, float desire_y, float desire_z, float desire_yaw, 
+        geometry_msgs::TwistStamped *cal_ctrl_set_vel);
 
     // TODO load !!!
     //幅值限制
