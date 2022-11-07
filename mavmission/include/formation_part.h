@@ -1,8 +1,11 @@
 // 编队飞行 模块
-  
 // 编队 队形设置、编队飞行
 
 // TODO yaw 保持为飞机当亲飞行方向
+
+// TODO 下面的状态量 需要梳理
+// ENUM_STATE_CTRL_FORMATION    state_formation_ctrl_all
+// ENUM_STATE_FORMATION         current_formation_state
 
 // #program once
 // #ifndef 
@@ -38,9 +41,11 @@ enum ENUM_STATE_FORMATION {
     FORMATION_STATE_CHECKED,
     FORMATION_STATE_CHECK_FAIL,
     // 编队执行
-    FORMATION_STATE_RUN_PREPARE,
-    FORMATION_STATE_RUN_FORMING,
+    FORMATION_STATE_RUN_PREPARE,    // 队形准备阶段
+    FORMATION_STATE_RUN_FORMING,    // 队形移动形成阶段
+    FORMATION_STATE_RUN_FORMED,     // 单机已经到达指定位置
     FORMATION_STATE_RUNNING,
+    // 编队执行错误 (1无领机位置信息
     FORMATION_STATE_RUN_FAIL
 };
 
@@ -50,6 +55,7 @@ enum ENUM_STATE_CTRL_FORMATION {
     // 
     FORMATION_CTRL_STATE_formation_prepare,
     FORMATION_CTRL_STATE_formation_forming,
+    FORMATION_CTRL_STATE_formation_formed,
     // 进入 编队 模式失败
     FORMATION_CTRL_STATE_unable_enter_formation,
 
@@ -106,7 +112,8 @@ private:
     float form_forming_target_z;
     float form_forming_target_yaw;  // 暂时忽略
     // count 计数器
-    float form_forming_target_count;
+    int form_forming_target_count;
+    int form_forming_target_count_max = 20; // 计数器 上界
     // 计数 判断距离
     float form_forming_target_distance_delta_xy = 0.5;
     float form_forming_target_distance_delta_z = 0.5;
@@ -217,6 +224,10 @@ private:
     double delta_enu_yaw_add;
 
 public:
+
+    // 编队形成过程中 切换 模式 
+    // return 1-切换正确 0-切换失败
+    bool formation_ctrl_all_follower_formation_forming_change(int param1, int param2);
 
 //-------------------------------------------------
 //                     编队邻居位置-ot_loc_pos_enu_cb

@@ -8,7 +8,7 @@ using namespace mav_mission;
 //-------------------------------------------------
 Formation_part::Formation_part():
     tp_nh("~"),             // param    /uav_mission/xxx
-    mavcomm_nh("mavcomm"),   // mavcomm  /mavcomm/XXX   pub&sub
+    mavcomm_nh("mavcomm"),  // mavcomm  /mavcomm/XXX   pub&sub
     mavros_nh("mavros")
 {
     // 数值 初始化
@@ -40,9 +40,6 @@ Formation_part::Formation_part():
     tp_nh.param<float>("formation/pid_1storder/maxVelocity_yaw", maxVelocity_1storder_yaw, 1.0);
 
     // std::cout << "pid_1storder_x.d = " << pid_1storder_x.d << std::endl;
-
-
-
 
     // 话题订阅     | neibor uav -> uav
     // 编队控制     |接收 其他无人机的位置信息 编队飞行
@@ -256,7 +253,8 @@ void Formation_part::formation_info_cb(const mavcomm_msgs::formation_info::Const
         break;
 
         case FORMATION_INFO_RUN: 
-            // TODO 切换并执行编队
+            // TODO 切换并执行编队 暂时不考虑
+            // 切不过去吧 ??? => 需要单独的一个 while() 循环 ???
             // 仅供测试用，正常在 mission 里调用&解析 task 后 
 
         break;
@@ -267,7 +265,7 @@ void Formation_part::formation_info_cb(const mavcomm_msgs::formation_info::Const
     }
 }
 
-// 编队某组队形设置
+// 编队某组队形设置 - Init初始化
 void Formation_part::Init_formation_group_setting
     (int group_id, int group_num, int group_type, uint8_t receive_id)
 {
@@ -288,7 +286,7 @@ void Formation_part::Init_formation_group_setting
     pubfunc_F_formation_back_info(FORMATION_STATE_SETTING, group_id, receive_id);
 }
 
-// 编队某组队形设置 校验
+// 编队某组队形设置 校验 校验是否已经正确的设置了
 void Formation_part::check_formation_group_setting
     (int group_id, int setbit_mm, uint8_t setbit_1, uint8_t setbit_2, uint8_t receive_id)
 {
@@ -426,6 +424,7 @@ void Formation_part::pubfunc_F_formation_back_info
     break;
     }
 
+    // 回应
     // common ID
     msg_formation_back_info.sysid = my_id;
     msg_formation_back_info.compid = receive_id;
@@ -465,7 +464,7 @@ void Formation_part::pubfunc_formation_back_info
 // follower
 // TBC 总控制 （保证正常切换到编队模式 & 选择控制算法）
 // switch_group_id 需要切换到的 group_id
-// return -1 返回 bug
+// return enum ENUM_STATE_CTRL_FORMATION
 
 // keep_z & keep_h 不变
 int Formation_part::formation_ctrl_all_follower
@@ -497,6 +496,22 @@ int Formation_part::formation_ctrl_all_follower
         }
 
         // ---------------------------------------------------------
+        // 当前 2 正要形成编队 - 单机 已经到指定位置，等待整体切换
+        if ( current_formation_state == FORMATION_STATE_RUN_FORMED )
+        {
+            formation_ctrl_desired_pos_enu(form_forming_target_x, form_forming_target_y, 
+                form_forming_target_z, form_forming_target_yaw, &d_cal_ctrl_set_vel);
+            // 输出
+            this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
+
+            // 分布式 一阶编队控制算法
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_formed;
+            return state_formation_ctrl_all;
+        }
+
+// formation_ctrl_all_follower_formation_forming_change
+
+        // ---------------------------------------------------------
         // 当前 2 正要形成编队
         if ( current_formation_state == FORMATION_STATE_RUN_FORMING )
         {
@@ -506,24 +521,54 @@ int Formation_part::formation_ctrl_all_follower
                 // 1 - form_in_turn 置0 直接按offset形成编队 [也不怎么推荐 - 轨迹 无避障]
                 // 根据 leader 的位置 飞到那里去
 
-
                 formation_ctrl_desired_pos_enu(form_forming_target_x, form_forming_target_y, 
                     form_forming_target_z, form_forming_target_yaw, &d_cal_ctrl_set_vel);
                 // 输出
                 this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
 
+                // 距离误差判断
+                float temp_delta_x, temp_delta_y, temp_delta_z;
+
+                temp_delta_x = form_forming_target_x - currentPose.pose.position.x;
+                temp_delta_y = form_forming_target_y - currentPose.pose.position.y;
+                temp_delta_z = form_forming_target_z - currentPose.pose.position.z;
+
                 // 位置判断
                 // ++ 决定是否要退出进入下一个阶段
-                
-                
+                if ( ( (temp_delta_x*temp_delta_x + temp_delta_y*temp_delta_y) 
+                      < form_forming_target_distance_delta_xy*form_forming_target_distance_delta_xy)
+                     && ( temp_delta_z*temp_delta_z 
+                     < form_forming_target_distance_delta_z*form_forming_target_distance_delta_z)
+                    )
+                {
+                    form_forming_target_count++;
+                }
+                else
+                {
+                    form_forming_target_count = 0;
+                }
+
+                if ( form_forming_target_count > form_forming_target_count_max)
+                {   
+                    // 认为到位置了
+                    // 切状态的话，得统一切
+                    // 通过额外的函数接口 切换 current_formation_state => 
+                    current_formation_state = FORMATION_STATE_RUN_FORMED;
+                    // 归 0
+                    form_forming_target_count = 0;
+                }
+
+                // 分布式 一阶编队控制算法
+                state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_forming;
+                return state_formation_ctrl_all;
+
             } 
             else // 1 - form_in_turn 置1 一架架，依次形成编队
-            {
+            {   
+                // T O D O
                 // 等待外部输入 
-                // 原地停止
-
+                // 原地停止 折线轨迹
                 // 当前位置向上 xy平移 最终位置向下 ...
-
             }
 
         }
@@ -534,7 +579,15 @@ int Formation_part::formation_ctrl_all_follower
             // 不应该有这个模式 !!!
             // 没有 leader 无人机的信息 
 
+            // 原地停止
+            formation_ctrl_desired_pos_enu(form_forming_target_x, form_forming_target_y, 
+                form_forming_target_z, form_forming_target_yaw, &d_cal_ctrl_set_vel);
+            // 输出
+            this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
 
+            // 进入 编队 模式失败
+            state_formation_ctrl_all = FORMATION_CTRL_STATE_unable_enter_formation;
+            return state_formation_ctrl_all;
         } 
 
         // ---------------------------------------------------------
@@ -547,7 +600,7 @@ int Formation_part::formation_ctrl_all_follower
             // 获得当前的 flag
             t_flag_form_direct = formation_array[my_id][current_group].flag && 0b00000001;
             t_flag_form_in_turn = formation_array[my_id][current_group].flag && 0b00000010;
-            std::cout << "my_id = " << my_id;
+            std::cout << " my_id = " << my_id;
             std::cout << ", t_flag_form_direct" << t_flag_form_direct;
             std::cout << ", t_flag_form_in_turn" << t_flag_form_in_turn << std::endl;
 
@@ -568,66 +621,94 @@ int Formation_part::formation_ctrl_all_follower
                 this_uav_px4_setVelocity_pub.publish( d_cal_ctrl_set_vel );
                 
                 // 切换模式 => 直接编队算法
-                state_formation_ctrl_all = FORMATION_STATE_RUNNING;
-                return state_formation_ctrl_all;
+                current_formation_state = FORMATION_STATE_RUNNING;
 
+                state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_prepare;
+                return state_formation_ctrl_all;
             }   
             else // 0 - form_direct  置1 先形成编队，之再编队算法 [看 flag 1]
             {
                 // 获取 leader 当前的实时位置
                 // 先 判断 位置数据的时间？ > 5s 位置无更新
                 if ( neighbor_loc_pos_ENU[current_group_leader_no].flag_update )
-                {   // 当前 flag_update 应该是新的
-                    // 实际需要判断一下
-
+                {   // 判断 当前 flag_update 是否 是新的
                     uint64_t temp_current_time;
                     temp_current_time = get_time_usec();
                     temp_current_time = temp_current_time - neighbor_loc_pos_ENU[current_group_leader_no].cur_msg_rec_time;
 
                     if ( temp_current_time < msg_rec_time_delta)
-                    {   
-                        // 未超时
+                    {   // 未超时
+                        // 获取 leader 位置信息
+                        form_forming_target_x = (float) neighbor_loc_pos_ENU[current_group_leader_no].x;
+                        form_forming_target_y = (float) neighbor_loc_pos_ENU[current_group_leader_no].y;
+                        form_forming_target_z = (float) neighbor_loc_pos_ENU[current_group_leader_no].z;
+                        form_forming_target_yaw = (float) neighbor_loc_pos_ENU[current_group_leader_no].yaw;
 
-
+                        // 位置到达 变量 清零
+                        form_forming_target_count = 0;
                     }
                     else
-                    {
-                        // 超时了 !!!
-                        neighbor_loc_pos_ENU[current_group_leader_no].flag_update = 0;
-                        // 当前 flag_update 不是新的
-                        // 进入 error （同下）
+                    {   // 超时-leader位置信息未更新 !!!
+                        // 当前 leader d  flag_update 不是新的
+                        // 进入 error （同下） 本机 当前位置悬停
 
-
+                        form_forming_target_x = (float) neighbor_loc_pos_ENU[my_id].x;
+                        form_forming_target_y = (float) neighbor_loc_pos_ENU[my_id].y;
+                        form_forming_target_z = (float) neighbor_loc_pos_ENU[my_id].z;
+                        form_forming_target_yaw = (float) neighbor_loc_pos_ENU[my_id].yaw;
+                        // 需要切到的状态
+                        current_formation_state = FORMATION_STATE_RUN_FAIL;
+                        // return 信息
+                        state_formation_ctrl_all = FORMATION_CTRL_STATE_unable_enter_formation;
+                        return state_formation_ctrl_all;
                     }
-
                 }
                 else
-                {
+                {   // 超时-leader位置信息未更新 !!!
                     // 当前 flag_update 不是新的
-                    // 进入 error   （同上）
-
-
+                    // 进入 error   （同上）    本机 当前位置悬停
+                    form_forming_target_x = (float) neighbor_loc_pos_ENU[my_id].x;
+                    form_forming_target_y = (float) neighbor_loc_pos_ENU[my_id].y;
+                    form_forming_target_z = (float) neighbor_loc_pos_ENU[my_id].z;
+                    form_forming_target_yaw = (float) neighbor_loc_pos_ENU[my_id].yaw;
+                    // 需要切到的状态
+                    current_formation_state = FORMATION_STATE_RUN_FAIL;
+                    // return 信息
+                    state_formation_ctrl_all = FORMATION_CTRL_STATE_unable_enter_formation;
+                    return state_formation_ctrl_all;
                 }
 
-                form_forming_target_x = (float) neighbor_loc_pos_ENU[current_group_leader_no].x;
-
                 // 变量 初值 赋值
-                if ( t_flag_form_direct == false )
+                // if ( t_flag_form_direct == false )
                 {
                     // 1 - form_in_turn 置0 直接按offset形成编队 [也不怎么推荐 - 轨迹 无避障]
                     // 根据 leader 的位置 飞到那里去
+                    form_forming_target_x = form_forming_target_x 
+                        - (float) formation_array[current_group_leader_no][current_group].offset_x
+                        + (float) formation_array[my_id][current_group].offset_x;
+                    
+                    form_forming_target_y = form_forming_target_y 
+                        - (float) formation_array[current_group_leader_no][current_group].offset_y
+                        + (float) formation_array[my_id][current_group].offset_y;
+                    
+                    // z 高度保持一致 TODO
+                    // form_forming_target_z = (float) neighbor_loc_pos_ENU[current_group_leader_no].z;
+                    // yaw 先不考虑了
+                    // form_forming_target_yaw = (float) neighbor_loc_pos_ENU[current_group_leader_no].yaw;
                 } 
-                else // 1 - form_in_turn 置1 一架架，依次形成编队
+                /* else 
+                // 1 - form_in_turn 置1 一架架，依次形成编队
                 {
                     // 等待外部输入 
                     // 原地停止
-
                     // 当前位置向上 xy平移 最终位置向下 ...
                 }
-                
+                */
 
                 // 切换模式 => 正要形成编队
-                state_formation_ctrl_all = FORMATION_STATE_RUN_FORMING;
+                current_formation_state = FORMATION_STATE_RUN_FORMING;
+                // return back 
+                state_formation_ctrl_all = FORMATION_CTRL_STATE_formation_forming;
                 return state_formation_ctrl_all;
             }
 
@@ -641,6 +722,7 @@ int Formation_part::formation_ctrl_all_follower
         if ( current_formation_state == FORMATION_STATE_CHECKED || 
              current_formation_state == FORMATION_STATE_RUN_PREPARE || 
              current_formation_state == FORMATION_STATE_RUN_FORMING || 
+             current_formation_state == FORMATION_STATE_RUN_FORMED || 
              current_formation_state == FORMATION_STATE_RUNNING
             )
         {
@@ -669,6 +751,35 @@ int Formation_part::formation_ctrl_all_follower
         }
     }
 }
+
+
+// 编队形成过程中 切换 
+bool Formation_part::formation_ctrl_all_follower_formation_forming_change
+    (int param1, int param2)
+{   
+    // param1 == 1 当所有无人机到达指定位置时，切 
+    if ( param1 == 1)
+    {   
+        if (current_formation_state == FORMATION_STATE_RUN_FORMED)
+        {
+
+            current_formation_state = FORMATION_STATE_RUNNING;
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    //TBD
+    if ( param1 == 2)
+    {   
+
+    }
+
+}
+
 
 
 // 一阶 分布式编队控制算法 xy

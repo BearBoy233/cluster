@@ -8,7 +8,7 @@
 using namespace mav_mission;
 
 //-------------------------------------------------
-// Init
+//  Init
 //-------------------------------------------------
 Mav_Mission::Mav_Mission() :
     tp_nh("~"),             // param    /uav_mission/xxx
@@ -114,7 +114,7 @@ void Mav_Mission::run()
         // Formation_part.
         
         // test_run_spinonce();
-            
+
         ros::spinOnce();
 		loop_rate.sleep();
 	}
@@ -294,3 +294,4 @@ void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstP
     }
 
 }
+;
