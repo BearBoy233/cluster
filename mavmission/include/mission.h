@@ -38,7 +38,9 @@ public:
 
 	void run();
 
+	// 任务设置模块
 	Task_part _task_part;
+	// 编队飞行模块
 	Formation_part _formation_part;
 	// mav_mission::Mav_Mission mission;
 
@@ -53,30 +55,32 @@ private:
 	// desired
 	ros::NodeHandle desired_nh;
 
-
-    // mavcomm 初始设置无人机编队 队形
-    ros::Subscriber set_local_pos_enu_sub;
-    // 回调函数     /mavcomm/receive/loc_pos_enu
-    // 话题订阅         | gcs -> uav
-    // 编队设置         // TBC flag=>enum
-    // *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
-    //  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
-    //  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
-    void set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
-    mavcomm_msgs::local_pos_enu msg_local_pos_enu;
-
-
-
-
 	// 通用部分
-	// init 
+	// ----------          ----------          INIT 
 	void commom_init();
 
 	int system_id;		// sysid 发送端编号	->发送时  发送端编号	/ 接收时 发送端编号
 	int companion_id;	// compid 接收端编号 ->发送时  接收端编号	/ 接收时 接收端编号
 	int my_id;			// my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
 
+	// ######      ------      ------      ######
+	/* mission_part 任务数据解析
+	1. 解析 当前的任务模块
+		=> 决定 进入何种 函数
+	*/
+	
+	// Parses task information
+	// 枚举 解析 任务消息 
+	enum ENUM_TASK_PARSES_INFOR {
+		INFOR_PARSES_TASK_NAN = 0,
+		INFOR_PARSES_TASK_take_off, 	// 起飞
+		INFOR_PARSES_TASK_land, 		// 降落
+		INFOR_PARSES_TASK_pos_enu,		// 移动 enu
+
+	};
+
 	// 任务设置 部分 mission
+
 
 	// px4_uav mission
 	// 无人机 任务模块
@@ -111,6 +115,16 @@ private:
 	double delta_pos[3];    // x y z
 	double delta_yaw;       // yaw
 	double delta_yaw_add;   // * PID_yaw_i
+
+
+    // mavcomm 初始设置无人机编队 队形
+    ros::Subscriber set_local_pos_enu_sub;
+    // 回调函数     /mavcomm/receive/loc_pos_enu
+    // 话题订阅         | gcs -> uav
+    // 编队设置         // TBC flag=>enum
+    // *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) => // TODO 移到 mission.cpp 中 
+    void set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg);
+    mavcomm_msgs::local_pos_enu msg_local_pos_enu;
 
 	// Mission 
 	// targetPose

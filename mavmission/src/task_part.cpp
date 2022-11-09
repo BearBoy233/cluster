@@ -8,7 +8,7 @@ using namespace mav_mission;
 //-------------------------------------------------
 Task_part::Task_part():
     tp_nh("~"),             // param    /uav_mission/xxx
-    mavcomm_nh("mavcomm")   // mavcomm  /mavcomm/XXX   pub&sub
+    mavcomm_nh("mavcomm")   // mavcomm  /mavcomm/XXX   pub & sub
 {   
     // 数值 初始化
     task_init();

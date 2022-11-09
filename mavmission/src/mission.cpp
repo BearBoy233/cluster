@@ -31,8 +31,6 @@ Mav_Mission::Mav_Mission() :
     // 话题订阅         | gcs -> uav
     // 编队设置         // TBC flag=>enum
     // *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp) 
-    //  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
-    //  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
     set_local_pos_enu_sub = mavcomm_nh.subscribe<mavcomm_msgs::local_pos_enu>
         ("receive/set_loc_pos_enu", 10, &Mav_Mission::set_local_pos_enu_cb, this );
     
@@ -58,7 +56,7 @@ void Mav_Mission::run()
         // TODO 广播 本机任务 状态信息
 
         if ( flag_mission_set == 1 || flag_mission_set == 2  ) // 0未设置 1设置中 2未校准 3校正完 4校准错误
-        {   //等待地面站 发过来的 mission
+        {   // 等待地面站 发过来的 mission
 
             //     
         }
@@ -129,7 +127,7 @@ void Mav_Mission::run()
 void Mav_Mission::commom_init()
 {
 
-    // common
+    // Pub   common ctrl 通用控制指令
     // 不使用 预留
     pub_ctrl_set_position = desired_nh.advertise<geometry_msgs::Point>("setTarget_position", 1);
     // 主要的 pos fast-planner
@@ -151,7 +149,7 @@ void Mav_Mission::commom_init()
 
 
 //-----------------------------------------------------------------------------------------
-//	px4 mavros 
+//   Sub   px4_mavros 
 //-----------------------------------------------------------------------------------------
 // 无人机位置 local
 void Mav_Mission::currentPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -272,8 +270,6 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
 // 话题订阅         | gcs -> uav
 // 编队设置         // TBC flag=>enum
 // *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp)
-//  (flag=2) gcs->uav 编队误差设置      (formation.cpp)
-//  (flag=3) uav->gcs 编队误差反馈      (formation.cpp)
 void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
 {
     // TBC mission 状态位置切换
