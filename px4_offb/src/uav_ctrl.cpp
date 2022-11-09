@@ -182,7 +182,7 @@ uavControl::uavControl(
     mavcomm_nh("mavcomm"),  // mavcomm  /mavcomm/XXX   pub&sub
     mavros_nh("mavros"),    // mavros   /mavros/XXX
     desired_nh("desired"),  // desired  /desired/XXX
-    gen_nh("gen")           // desired  /desired/XXX 
+    gen_nh("gen")           // gen      /gen/XXX 
 {
     rate = new ros::Rate( 30.0 );
 

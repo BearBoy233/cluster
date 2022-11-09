@@ -8,7 +8,7 @@
 using namespace mav_mission;
 
 //-------------------------------------------------
-//  Init
+//  Init 
 //-------------------------------------------------
 Mav_Mission::Mav_Mission() :
     tp_nh("~"),             // param    /uav_mission/xxx
@@ -138,7 +138,7 @@ void Mav_Mission::commom_init()
     // TODO 发布无人机状态 待其他程序调用
     pub_CurrentMissionState = mavcomm_nh.advertise<std_msgs::UInt8>("mission_state", 1);
 
-    // mavros state
+    // mavros state sub
     /* Local position from FCU. ENU坐标系(惯性系) */ 
 	currentPose_sub = mavros_nh.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
     /* Local velocity from FCU. ENU坐标系(惯性系) */ 

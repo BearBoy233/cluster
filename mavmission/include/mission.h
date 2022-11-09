@@ -44,7 +44,6 @@ public:
 	Formation_part _formation_part;
 	// mav_mission::Mav_Mission mission;
 
-
 private:
     // 用于 订阅 发布 param读取
     ros::NodeHandle tp_nh;
@@ -55,40 +54,61 @@ private:
 	// desired
 	ros::NodeHandle desired_nh;
 
+	// ############################################################
 	// 通用部分
-	// ----------          ----------          INIT 
+	// Init 
 	void commom_init();
 
+	// 通用常量
 	int system_id;		// sysid 发送端编号	->发送时  发送端编号	/ 接收时 发送端编号
 	int companion_id;	// compid 接收端编号 ->发送时  接收端编号	/ 接收时 接收端编号
 	int my_id;			// my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
 
-	// ######      ------      ------      ######
+	// to mavros/px4 控制 指令
+	ros::Publisher pub_ctrl_set_position;   // 不使用
+	ros::Publisher pub_ctrl_set_pose;       // 主要的
+	ros::Publisher pub_ctrl_set_vel;        // TODO
+
+	// from mavros/px4
+	/* Local position from FCU. ENU坐标系(惯性系) */ 
+	void currentPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+	geometry_msgs::Pose currentPose;
+	ros::Subscriber     currentPose_sub;
+	/* Local velocity from FCU. ENU坐标系(惯性系) */ 
+	void currentVelocity_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
+	geometry_msgs::TwistStamped currentVelocity; 
+	ros::Subscriber     currentVelocity_sub;  
+
+	// 
+	ros::Publisher  pub_CurrentMissionState; // 告知其他节点 Mission State
+	std_msgs::UInt8 msg_mission_state;
+
+	// ############################################################
 	/* mission_part 任务数据解析
 	1. 解析 当前的任务模块
 		=> 决定 进入何种 函数
 	*/
 	
 	// Parses task information
-	// 枚举 解析 任务消息 
+	// 枚举 mis_array[MAX_NUM_MIS].msg_mission_set.mission_task
 	enum ENUM_TASK_PARSES_INFOR {
 		INFOR_PARSES_TASK_NAN = 0,
-		INFOR_PARSES_TASK_take_off, 	// 起飞
+		INFOR_PARSES_TASK_takeoff, 		// 起飞
 		INFOR_PARSES_TASK_land, 		// 降落
-		INFOR_PARSES_TASK_pos_enu,		// 移动 enu
-
+		INFOR_PARSES_TASK_pos_enu,		// 打点移动 enu
+		INFOR_PARSES_TASK_foramtion,	// 编队飞行
+		INFOR_PARSES_TASK_track,		// 目标追踪
 	};
 
-	// 任务设置 部分 mission
+	// msg_mission_set.mission_task 解析函数
+	void parses_current_mission_task();
+	// handle 不同的 switch case
+	void mission_task_handle_takeoff();
+	void mission_task_handle_land();
+	void mission_task_handle_pos_enu();
+	void mission_task_handle_foramtion();
+	void mission_task_handle_track();
 
-
-	// px4_uav mission
-	// 无人机 任务模块
- 
-	// px4 控制
-	ros::Publisher pub_ctrl_set_position;   // 不使用
-	ros::Publisher pub_ctrl_set_pose;       // 主要的
-	ros::Publisher pub_ctrl_set_vel;        // TODO
 
 	// 任务目标
 	geometry_msgs::Point    msg_ctrl_set_position;
@@ -97,16 +117,7 @@ private:
 	// double target_yaw = msg_ctrl_set_pose.orientation.w;    [-pi,pi]
 	geometry_msgs::TwistStamped msg_ctrl_set_vel;
 
-	ros::Publisher  pub_CurrentMissionState; // 告知 Mission State
-	std_msgs::UInt8 msg_mission_state;
-
-	void currentPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
-	geometry_msgs::Pose currentPose;
-	ros::Subscriber     currentPose_sub;
-
-	void currentVelocity_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
-	geometry_msgs::TwistStamped currentVelocity; 
-	ros::Subscriber     currentVelocity_sub;    
+  
 
 	void PoseControl();
 	void formation_pidVelocityControl();
