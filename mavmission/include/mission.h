@@ -95,7 +95,7 @@ private:
 		INFOR_PARSES_TASK_NAN = 0,
 		INFOR_PARSES_TASK_takeoff, 		// 起飞
 		INFOR_PARSES_TASK_land, 		// 降落
-		INFOR_PARSES_TASK_pos_enu,		// 打点移动 enu
+		INFOR_PARSES_TASK_pos_enu,		// 打点移动 enu (flag 避障)
 		INFOR_PARSES_TASK_foramtion,	// 编队飞行
 		INFOR_PARSES_TASK_track,		// 目标追踪
 	};
@@ -108,6 +108,13 @@ private:
 	void mission_task_handle_pos_enu();
 	void mission_task_handle_foramtion();
 	void mission_task_handle_track();
+
+	// 进入下一个任务 信号
+	bool flag_signal_next_mission_inorder; 			// 按顺序下一个
+	bool flag_signal_next_mission_onlythisdrone; 	// 按顺序本机的下一个
+	
+	// 获取的任务信息状态
+	bool flag_;
 
 
 	// 任务目标

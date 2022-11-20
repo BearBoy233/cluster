@@ -66,6 +66,9 @@ void Mav_Mission::run()
             // 任务流程
             // 判断模式
 
+
+            // parses_current_mission_task();
+
             // 判断无人机模式 [! ]
 
             // if ()

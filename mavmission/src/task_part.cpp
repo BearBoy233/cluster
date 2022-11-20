@@ -127,7 +127,7 @@ void Task_part::mission_info_cb
 
         case MISSION_INFO_RUN: // 仅供测试用,正常直接调用
 
-            // TODO
+            // TODO 不在这里用 ?
 
         break;
 
@@ -138,8 +138,8 @@ void Task_part::mission_info_cb
 
 }
 
-// gcs -> uav   flag==1    |任务初始化   |需要回应 
-// mavcomm_msgs::mission_info   .flag=1 
+// gcs -> uav   |任务初始化   |需要回应 
+// mavcomm_msgs::mission_info   .flag=MISSION_INFO_SET_INIT 
 void Task_part::mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
     msg_temp_mission_info = *msg;
@@ -162,8 +162,8 @@ void Task_part::mission_settings_init(const mavcomm_msgs::mission_info::ConstPtr
     mission_F_settings_back_info( current_mission_state );
 }
 
-// gcs -> uav   flag==2    |任务设置完成进行 校验  |需要回应 
-// mavcomm_msgs::mission_info   .flag=2 
+// gcs -> uav   |任务设置完成进行 校验  |需要回应 
+// mavcomm_msgs::mission_info   .flag=MISSION_INFO_CHECK 
 void Task_part::mission_setting_check
     (const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
@@ -235,7 +235,6 @@ void Task_part::mission_setting_check
     // 告知 gcs
     mission_F_settings_back_info( current_mission_state );
 }
-
 
 // gcs -> uav   |读取本地任务   |需要回应 
 // mavcomm_msgs::mission_info   .flag=MISSION_INFO_LOAD 
@@ -334,7 +333,7 @@ void Task_part::mission_setting_save
 void Task_part::mission_F_settings_back_info(int flag_state, int param1)
 {
     switch ( flag_state )
-    {
+    {   // ENUM_STATE_MISSION
     
     //--------------------------------------
     // 设置模式
@@ -613,5 +612,21 @@ int Task_part::nljson_file_save(char *path, int num)
     }
 }
 
+
 // json 处理 END
+//-------------------------------------------------
+// Func                              获取当前任务状态
+//-------------------------------------------------
+// 接口 获得当前的 任务
+void Task_part::get_current_mission_task
+    (mavcomm_msgs::mission_set *msg_mission, int *last_mis_no, int *next_mis_no)
+{
+    msg_mission = &(mis_array[mis_array_current].msg_mission_set);
+
+    last_mis_no = &(mis_array[mis_array_current].last_uav_mis_no);
+
+    next_mis_no = &(mis_array[mis_array_current].next_uav_mis_no);
+}
+
+
 

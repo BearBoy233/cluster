@@ -1,8 +1,13 @@
 // 集群任务的管理
   
 // 任务的 设置、校验、保存、读取
+  
+// TODO 任务按组来分 设置 
+// uav_no(单机编号0-10 分组编号201-240 地面站100 所有无人机99)
 
-// Future TODO - PDDL
+// Future TODO - PDDL (mission.h 中)
+
+// 当前的任务
 
 // #pragma once
 // #ifndef 
@@ -17,6 +22,7 @@
 
 using json = nlohmann::json;
 
+// mission_info_cb (mavcomm_msgs::mission_info)
 // mision_info.msg
 enum ENUM_INFO_MISSION {
     MISSION_INFO_NAN = 0,
@@ -67,6 +73,33 @@ private:
     // mission part
     enum ENUM_STATE_MISSION current_mission_state; // 当前的任务状态
 
+
+    // param 参数读取    
+    // my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
+    int my_id;
+    // storage path
+    std::string file_storage_path_head;
+    std::string file_storage_path;
+    char file_storage_path_cstr[200];
+    // strcpy(file_storage_path_cstr, file_storage_path.c_str());
+
+
+    // nljson
+    // int nljson_file_save(std::string path, int num=2); //保存
+    int nljson_file_save(char *path, int num=2); //保存
+    // int nljson_file_load(std::string path, int num=2); //读取
+    int nljson_file_load(char *path, int num, uint8_t param1, uint8_t param2);//读取
+
+    // json
+    json test_json_data;
+    json temp_json_data;
+    void from_json_to_mis_array();
+    void from_mis_array_to_json(int num);
+
+
+
+    // ------------------------------------------
+    // 等待处理
     // TBD
     // TODO 改成 枚举类型
     int flag_mission_set = 0;           // 任务设置状态  // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
@@ -74,30 +107,35 @@ private:
     int flag_mission_start = 0;         // 任务执行状态    0-未开始 1-任务运行 2-暂停
     int flag_mission_sync = 0;          // 任务同步标志    1-顺序执行 2-同步执行
     int flag_mission_pause_task = 0;    // 任务暂停       1暂停&悬停 /2暂停&原地降落 /3暂停&起飞位置降落
-
-    // param 参数读取 
-
-    // my_id 本机编号 	[ 100-地面站 ] 	[99-所有无人机]
-    int my_id;
-
-    std::string file_storage_path_head;
-    std::string file_storage_path;
-    char file_storage_path_cstr[200];
-    // strcpy(file_storage_path_cstr, file_storage_path.c_str());
-
-    // nljson
-    // int nljson_file_save(std::string path, int num=2); //保存
-    int nljson_file_save(char *path, int num=2); //保存
-
-    // int nljson_file_load(std::string path, int num=2); //读取
-    int nljson_file_load(char *path, int num, uint8_t param1, uint8_t param2);//读取
+    // end
+    // ------------------------------------------
 
 
-    json test_json_data;
-    json temp_json_data;
+public:
 
-    void from_json_to_mis_array();
-    void from_mis_array_to_json(int num);
+    // ------------------------------------------
+    // 待添加 函数 mission 获取 本 cpp 程序
+
+    // 接口函数 
+    // 获得当前的 任务
+    void get_current_mission_task
+        (mavcomm_msgs::mission_set *msg_mission, int *last_mis_no, int *next_mis_no);
+
+    // 获取当前的状态 ENUM_INFO_MISSION 
+
+
+    // 获取当前的状态 ENUM_STATE_MISSION
+
+
+    // 下一个任务 
+    void set_mission_task_next( );
+
+
+    // end
+    // ------------------------------------------
+
+
+
 
 private:
     // 数值 初始化
