@@ -611,15 +611,17 @@ int Task_part::nljson_file_save(char *path, int num)
         return 11;
     }
 }
-
-
 // json 处理 END
+
+
 //-------------------------------------------------
 // Func                              获取当前任务状态
 //-------------------------------------------------
 // 接口 获得当前的 任务
 void Task_part::get_current_mission_task
-    (mavcomm_msgs::mission_set *msg_mission, int *last_mis_no, int *next_mis_no)
+    (mavcomm_msgs::mission_set *msg_mission, 
+     int *last_mis_no, 
+     int *next_mis_no)
 {
     msg_mission = &(mis_array[mis_array_current].msg_mission_set);
 

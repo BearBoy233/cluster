@@ -34,7 +34,6 @@ Mav_Mission::Mav_Mission() :
     set_local_pos_enu_sub = mavcomm_nh.subscribe<mavcomm_msgs::local_pos_enu>
         ("receive/set_loc_pos_enu", 10, &Mav_Mission::set_local_pos_enu_cb, this );
     
-
     // TBD
     // mission_state = UNINIT;
     // mission_state_last = UNINIT;
@@ -47,79 +46,32 @@ void Mav_Mission::run()
 {
 	ros::Rate loop_rate(20);
 
-    int temp = ID_GCS;
-   	
+    // init param
     while (	ros::ok() ) 
     {	
-		// ros::spinOnce();
+        // 获取当前任务状态信息
+        current_mission_state = _task_part.get_current_mission_state();
 
-        // TODO 广播 本机任务 状态信息
+        if ( current_mission_state == MISSION_STATE_CHECKED)
+        {   // task_part 任务具体执行中
+            
+            parses_current_mission_task();
 
-        if ( flag_mission_set == 1 || flag_mission_set == 2  ) // 0未设置 1设置中 2未校准 3校正完 4校准错误
-        {   // 等待地面站 发过来的 mission
 
-            //     
+
+
         }
-
-        if ( flag_mission_start )
+        else
         {
-            // 任务流程
-            // 判断模式
-
-
-            // parses_current_mission_task();
-
-            // 判断无人机模式 [! ]
-
-            // if ()
-
-        PoseControl();  // 位置控制 + fast_planner
-
-        // formation_pidVelocityControl(); // 编队控制
-
-        /*
-            case FORMATION_FLY:
-                if (node_state_last != node_state) {
-                    node_state_last = node_state;
-
-                    msg_state_machine.data = node_state & 0xFF;
-                    mavCurrentState_pub.publish(msg_state_machine);
-                    ROS_INFO_STREAM( " Current node_state = FORMATION_FLY " );
-                }
-                // 速度PID控制
-                formation_pidVelocityControl();
-                // 位置控制
-                // positionControl();
-            break;
-
-            case TRACK:
-                if (node_state_last != node_state) {
-                    node_state_last = node_state;
-
-                    msg_state_machine.data = node_state & 0xFF;
-                    mavCurrentState_pub.publish(msg_state_machine);
-                    ROS_INFO_STREAM( " Current node_state = TRACK " );
-                }
-                // 速度PID控制
-                track_pidVelocityControl();
-                // 位置控制
-                // positionControl();
-            break;
-        */
-
-        // 判断 mission 有没有完成
-        // 实现的话 + 1 
+            // task_part 任务输入 校验
+            // 应该 都由 task_part 中 ROS_sub 订阅完成了 
+            // 待确认！
 
         }
-
-        // Formation_part.
-        
-        // test_run_spinonce();
 
         ros::spinOnce();
 		loop_rate.sleep();
-	}
-
+	} 
 	// return 0;
 }
 
@@ -129,7 +81,6 @@ void Mav_Mission::run()
 //-------------------------------------------------
 void Mav_Mission::commom_init()
 {
-
     // Pub   common ctrl 通用控制指令
     // 不使用 预留
     pub_ctrl_set_position = desired_nh.advertise<geometry_msgs::Point>("setTarget_position", 1);
@@ -142,6 +93,7 @@ void Mav_Mission::commom_init()
     pub_CurrentMissionState = mavcomm_nh.advertise<std_msgs::UInt8>("mission_state", 1);
 
     // mavros state sub
+    // 订阅 mavros 状态 位置信息(判断任务进入下一阶段!)
     /* Local position from FCU. ENU坐标系(惯性系) */ 
 	currentPose_sub = mavros_nh.subscribe<geometry_msgs::PoseStamped>("local_position/pose", 10, &Mav_Mission::currentPose_cb, this ); 
     /* Local velocity from FCU. ENU坐标系(惯性系) */ 
@@ -167,10 +119,8 @@ void Mav_Mission::currentVelocity_cb(const geometry_msgs::TwistStamped::ConstPtr
 }
 
 
-
-
 //-----------------------------------------------------------------------------------------
-//	px4 PID control ()
+// px4 直接控制 px4 PID control ()
 //-----------------------------------------------------------------------------------------
 // 
 
@@ -187,8 +137,41 @@ void Mav_Mission::track_pidVelocityControl()
 
 }
 
+
+//-------------------------------------------------
+// Func          设置飞机单点目标-set_local_pos_enu_cb
+//-------------------------------------------------
+// TBC
+// 回调函数     /mavcomm/receive/loc_pos_enu
+// 话题订阅         | gcs -> uav
+// 编队设置         // TBC flag=>enum
+// *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp)
+void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+{
+    // TBC mission 状态位置切换
+
+    msg_local_pos_enu = *msg;
+
+    if (msg_local_pos_enu.flag == 1)
+    {   
+        //  设置飞机目标位置
+        Mission_pose_current.position.x = (double) msg_local_pos_enu.x; 
+        Mission_pose_current.position.y = (double) msg_local_pos_enu.y;
+        Mission_pose_current.position.z = (double) msg_local_pos_enu.z;
+        Mission_pose_current.orientation.w = (double) msg_local_pos_enu.yaw;
+
+        ROS_INFO_STREAM( " Set target Pos to [" << Mission_pose_current.position.x << ", " << 
+        Mission_pose_current.position.y << ", " << Mission_pose_current.position.z << ", " << 
+        Mission_pose_current.orientation.w / PI_3 * 180.0 << "]");
+    }
+
+}
+
+
 /*
-// 地面站 => 无人机
+// 地面站 => 无人机 任务切换 
+// 任务开始 & 暂停 & 继续 & 结束 & 从XX开始
+// mission_info 需要 改成其他 类型
 void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& msg)
 {
     msg_mission_info = *msg;
@@ -265,32 +248,124 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
 
 
 
+
+
+
+
 //-------------------------------------------------
-// Func          设置飞机单点目标-set_local_pos_enu_cb
+// Func    任务解析和执行-parses_current_mission_task
 //-------------------------------------------------
-// TBC
-// 回调函数     /mavcomm/receive/loc_pos_enu
-// 话题订阅         | gcs -> uav
-// 编队设置         // TBC flag=>enum
-// *(flag=1) gcs->uav 无人机 ENU航点Pos (mission.cpp)
-void Mav_Mission::set_local_pos_enu_cb(const mavcomm_msgs::local_pos_enu::ConstPtr &msg)
+// msg_mission_set.mission_task 解析函数
+void Mav_Mission::parses_current_mission_task()
 {
-    // TBC mission 状态位置切换
 
-    msg_local_pos_enu = *msg;
+    switch ( current_mission_state )
+    {
+    case INFOR_PARSES_TASK_takeoff:
+        /* 起飞 */
+        mission_task_handle_takeoff();
+    break;
 
-    if (msg_local_pos_enu.flag == 1)
-    {   
-        //  设置飞机目标位置
-        Mission_pose_current.position.x = (double) msg_local_pos_enu.x; 
-        Mission_pose_current.position.y = (double) msg_local_pos_enu.y;
-        Mission_pose_current.position.z = (double) msg_local_pos_enu.z;
-        Mission_pose_current.orientation.w = (double) msg_local_pos_enu.yaw;
+    case INFOR_PARSES_TASK_land:
+        /* 降落 */
+        mission_task_handle_land();
+    break;
 
-        ROS_INFO_STREAM( " Set target Pos to [" << Mission_pose_current.position.x << ", " << 
-        Mission_pose_current.position.y << ", " << Mission_pose_current.position.z << ", " << 
-        Mission_pose_current.orientation.w / PI_3 * 180.0 << "]");
+    case INFOR_PARSES_TASK_pos_enu:
+        /* 打点移动 enu */
+        mission_task_handle_pos_enu();
+    break;
+
+    case INFOR_PARSES_TASK_foramtion:
+        /* 编队飞行 */
+        mission_task_handle_foramtion();
+    break;
+
+
+    case INFOR_PARSES_TASK_track:
+        /* 目标追踪 */
+        mission_task_handle_track();
+    break;
+    
+    default:
+
+        break;
     }
+        // 
+
+		// ros::spinOnce();
+        // TODO 广播 本机任务 状态信息
+        // formation_pidVelocityControl(); 
+        // 编队控制
+
+        /*
+            case FORMATION_FLY:
+                if (node_state_last != node_state) {
+                    node_state_last = node_state;
+
+                    msg_state_machine.data = node_state & 0xFF;
+                    mavCurrentState_pub.publish(msg_state_machine);
+                    ROS_INFO_STREAM( " Current node_state = FORMATION_FLY " );
+                }
+                // 速度PID控制
+                formation_pidVelocityControl();
+                // 位置控制
+                // positionControl();
+            break;
+
+            case TRACK:
+                if (node_state_last != node_state) {
+                    node_state_last = node_state;
+
+                    msg_state_machine.data = node_state & 0xFF;
+                    mavCurrentState_pub.publish(msg_state_machine);
+                    ROS_INFO_STREAM( " Current node_state = TRACK " );
+                }
+                // 速度PID控制
+                track_pidVelocityControl();
+                // 位置控制
+                // positionControl();
+            break;
+        */
+
+        // 判断 mission 有没有完成
+        // 实现的话 + 1 
 
 }
-;
+
+
+//-------------------------------------------------
+// ENUM_TASK_PARSES_INFOR = INFOR_PARSES_TASK_takeoff
+// mission_task_handle_takeoff
+//-------------------------------------------------
+void Mav_Mission::mission_task_handle_takeoff()
+{
+
+
+}
+
+
+void Mav_Mission::mission_task_handle_land()
+{
+
+
+}
+
+void Mav_Mission::mission_task_handle_pos_enu()
+{
+
+
+}
+
+
+void Mav_Mission::mission_task_handle_foramtion()
+{
+
+
+}
+
+void Mav_Mission::mission_task_handle_track()
+{
+
+
+}

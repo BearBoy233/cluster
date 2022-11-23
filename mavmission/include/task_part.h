@@ -70,8 +70,8 @@ private:
     // mavcomm (pub/sub)
     ros::NodeHandle mavcomm_nh;
 
-    // mission part
-    enum ENUM_STATE_MISSION current_mission_state; // 当前的任务状态
+    // mission part // 当前的任务状态
+    enum ENUM_STATE_MISSION current_mission_state; 
 
 
     // param 参数读取    
@@ -117,19 +117,35 @@ public:
     // 待添加 函数 mission 获取 本 cpp 程序
 
     // 接口函数 
+
+    // 总任务数目 
+    int get_mis_total()
+    {   return mis_total;
+    }
+
+    // 获取当前任务状态 mission part (current_mission_state)
+    ENUM_STATE_MISSION get_current_mission_state()
+    {   return current_mission_state;
+    }
+
+    // 获得当前 mis_array_current 编号
+    int get_mis_array_current()
+    {   return mis_array_current;
+    }
+
     // 获得当前的 任务
     void get_current_mission_task
         (mavcomm_msgs::mission_set *msg_mission, int *last_mis_no, int *next_mis_no);
+    
+    // 获取 判断 当前任务是否是本机的
+    bool check_current_mission_this_drone()
+    {   return mis_array[mis_array_current].flag_this_uav;      
+    }
 
-    // 获取当前的状态 ENUM_INFO_MISSION 
-
-
-    // 获取当前的状态 ENUM_STATE_MISSION
-
-
-    // 下一个任务 
-    void set_mission_task_next( );
-
+    // 进入下一个任务 
+    void set_mission_task_next(int set_next_no)
+    {   mis_array_current = set_next_no;
+    }
 
     // end
     // ------------------------------------------

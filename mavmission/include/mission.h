@@ -2,6 +2,8 @@
 // #pragma once
 // #ifndef 
 
+// TODO px4_ctrl 修改 ?
+
 #include <com_define.h>
 
 #include <signal.h>
@@ -109,6 +111,7 @@ private:
 	void mission_task_handle_foramtion();
 	void mission_task_handle_track();
 
+    enum ENUM_STATE_MISSION current_mission_state;
 	// 进入下一个任务 信号
 	bool flag_signal_next_mission_inorder; 			// 按顺序下一个
 	bool flag_signal_next_mission_onlythisdrone; 	// 按顺序本机的下一个
