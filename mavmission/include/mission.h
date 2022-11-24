@@ -95,7 +95,7 @@ private:
 	// 枚举 mis_array[MAX_NUM_MIS].msg_mission_set.mission_task
 	enum ENUM_TASK_PARSES_INFOR {
 		INFOR_PARSES_TASK_NAN = 0,
-		INFOR_PARSES_TASK_takeoff, 		// 起飞
+		INFOR_PARSES_TASK_takeoff,  		// 起飞
 		INFOR_PARSES_TASK_land, 		// 降落
 		INFOR_PARSES_TASK_pos_enu,		// 打点移动 enu (flag 避障)
 		INFOR_PARSES_TASK_foramtion,	// 编队飞行
