@@ -27,6 +27,8 @@ add_message_files(
   mission/mission_info.msg
   mission/mission_back_info.msg
   mission/mission_set.msg
+
+  mission/mission_exec.msg
   
   formation/formation_info.msg
   formation/formation_back_info.msg

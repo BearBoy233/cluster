@@ -53,12 +53,13 @@ void Mav_Mission::run()
         current_mission_state = _task_part.get_current_mission_state();
 
         if ( current_mission_state == MISSION_STATE_CHECKED)
-        {   // task_part 任务具体执行中
-            
-            parses_current_mission_task();
-
-
-
+        {   
+            // 进入 具体执行状态  暂停状态 还是其他的 !!!!
+            if ( 1 )
+            {
+                // task_part 任务具体执行中
+                parses_current_mission_task();
+            }
 
         }
         else
@@ -99,6 +100,12 @@ void Mav_Mission::commom_init()
     /* Local velocity from FCU. ENU坐标系(惯性系) */ 
 	currentVelocity_sub = mavros_nh.subscribe<geometry_msgs::TwistStamped>("local_position/velocity_local", 10, &Mav_Mission::currentVelocity_cb, this );
 
+    // 订阅 地面站 指令 mission_exec 开始 暂停 继续 从N开始 结束降落 降落 结束悬停
+	// flag h7-l0 h7=1整体顺序执行 h6=1整体同步执行(各管各的)
+	mission_exec_sub = mavcomm_nh.subscribe<mavcomm_msgs::mission_exec>("receive/mission_exec", 10, &Mav_Mission::mission_exec_cb, this );
+
+
+
 }
 
 
@@ -117,6 +124,96 @@ void Mav_Mission::currentVelocity_cb(const geometry_msgs::TwistStamped::ConstPtr
 {
     currentVelocity.twist = msg->twist;
 }
+
+//-----------------------------------------------------------------------------------------
+//   Sub   mavcomm_msgs 
+//-----------------------------------------------------------------------------------------
+// 订阅 地面站 指令 mission_exec 1从N开始(默认0) 2暂停 3继续 4紧急降落 
+// TODO flag h7-l0 h7=1整体顺序执行 h6=1整体同步执行(各管各的)
+void Mav_Mission::mission_exec_cb(const mavcomm_msgs::mission_exec::ConstPtr& msg)
+{
+    msg_mission_exec = *msg;
+
+    // 各 case 需要 判断， 当前任务状态 是否符合要求 可以切换 !!!
+    // TODO - error back 反馈 !!!
+
+    switch (msg_mission_exec.instruct_status)
+    {
+    case 1: // 从N开始/切换到N (默认0)
+        
+        if (current_mission_state == MISSION_STATE_CHECKED)
+        {   // 按指令 设置任务的no 
+            // (no和当前飞机的编号不相同时, 向上追溯)
+
+            // 设置系统当前任务编号
+            int temp_current_no, temp_no, temp_last_no, temp_next_no;
+            
+            temp_no = (int) msg_mission_exec.mission_no;
+            temp_last_no = _task_part.get_this_last_uav_mis_no(temp_no);
+            temp_next_no = _task_part.get_this_next_uav_mis_no(temp_no);
+            temp_current_no = _task_part.get_mis_array_current();
+
+
+            // mission 当前整体按顺序执行 
+            // TODO 按无人机 的个体 顺序 执行
+            // 设置temp_no
+            _task_part.set_mission_task_next(temp_no);
+            mission_exec_status_current = STATUS_MISSION_EXEC_run;
+    
+        /*
+            if (temp_no==0)
+            {   
+                // 从头开始 空的
+                // 设置temp_no
+                _task_part.set_mission_task_next(temp_no);
+                mission_exec_status_current = STATUS_MISSION_EXEC_run;
+            } 
+            else 
+            {
+                mission_exec_status_current = STATUS_MISSION_EXEC_run;
+            }
+        */
+
+        } 
+
+        // 反馈 pub back
+        
+        break;
+
+    case 2: // 暂停
+        if (mission_exec_status_current == STATUS_MISSION_EXEC_run)
+        {
+            mission_exec_status_current = STATUS_MISSION_EXEC_pause;
+        }
+
+        break;
+    
+    case 3: // 继续已暂停的任务
+        if (mission_exec_status_current == STATUS_MISSION_EXEC_pause)
+        {
+            mission_exec_status_current = STATUS_MISSION_EXEC_run;
+        }
+
+        break;
+
+    case 4: // 降落
+        if ( (mission_exec_status_current == STATUS_MISSION_EXEC_run)
+            || (mission_exec_status_current == STATUS_MISSION_EXEC_pause)
+            || (mission_exec_status_current == STATUS_MISSION_EXEC_prepare_move)            
+            )
+        {
+            mission_exec_status_current = STATUS_MISSION_EXEC_emeland;
+        }
+
+        break;
+
+    default:
+
+        break;
+    }
+
+}
+
 
 
 //-----------------------------------------------------------------------------------------
@@ -245,10 +342,6 @@ void Mav_Mission::mission_info_cb(const mavcomm_msgs::mission_info::ConstPtr& ms
 }
 
 */
-
-
-
-
 
 
 

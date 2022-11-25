@@ -50,7 +50,7 @@ enum ENUM_STATE_MISSION {
     MISSION_STATE_CHECK_FAIL_CRC,
     MISSION_STATE_CHECK_FAIL_INCOMPLETE,
 
-    // 只用于回应
+    // 以下部分只用于回应
     MISSION_STATE_SAVING,
     MISSION_STATE_SAVED,
     MISSION_STATE_SAVE_FAIL,
@@ -102,7 +102,6 @@ private:
     // 等待处理
     // TBD
     // TODO 改成 枚举类型
-    int flag_mission_set = 0;           // 任务设置状态  // 0未设置 1设置中 2未校准 3校正完 4校准错误 5读取错误
 
     int flag_mission_start = 0;         // 任务执行状态    0-未开始 1-任务运行 2-暂停
     int flag_mission_sync = 0;          // 任务同步标志    1-顺序执行 2-同步执行
@@ -131,6 +130,26 @@ public:
     // 获得当前 mis_array_current 编号
     int get_mis_array_current()
     {   return mis_array_current;
+    }
+
+    // 获得当前 mis_array_current.last_mis_no 编号
+    int get_mis_array_current_last_uav_mis_no()
+    {   return mis_array[mis_array_current].last_uav_mis_no;
+    }
+
+    // 获得当前 mis_array_current.next_mis_no 编号
+    int get_mis_array_current_next_uav_mis_no()
+    {   return mis_array[mis_array_current].next_uav_mis_no;
+    }
+
+    // 获得 指定的 this_no.last_mis_no 编号
+    int get_this_last_uav_mis_no(int this_no)
+    {   return mis_array[this_no].last_uav_mis_no;
+    }
+
+    // 获得 指定的 this_no.next_mis_no 编号
+    int get_this_next_uav_mis_no(int this_no)
+    {   return mis_array[this_no].next_uav_mis_no;
     }
 
     // 获得当前的 任务

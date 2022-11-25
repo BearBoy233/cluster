@@ -1,4 +1,7 @@
 
+// mission 当前整体按顺序执行 
+// TODO 按无人机 的个体 顺序 执行
+
 // #pragma once
 // #ifndef 
 
@@ -19,8 +22,10 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/UInt8.h>
 
-#include <mavcomm_msgs/ChangeState.h>
+// #include <mavcomm_msgs/ChangeState.h>
 #include <mavcomm_msgs/local_pos_enu.h>
+
+#include <mavcomm_msgs/mission_exec.h>
 
 #include <mav_mission/PositionCommand.h>
 
@@ -81,7 +86,33 @@ private:
 	geometry_msgs::TwistStamped currentVelocity; 
 	ros::Subscriber     currentVelocity_sub;  
 
-	// 
+	// 订阅 地面站 指令 mission_exec 1从N开始(默认0) 2暂停 3继续 4紧急降落 
+	// TODO flag h7-l0 h7=1整体顺序执行 h6=1整体同步执行(各管各的)
+	void mission_exec_cb(const mavcomm_msgs::mission_exec::ConstPtr& msg);
+	ros::Subscriber		mission_exec_sub; 
+	mavcomm_msgs::mission_exec msg_mission_exec;
+
+	enum ENUM_EXEC_MISSION_STATUS {
+		STATUS_MISSION_EXEC_NAN = 0,
+		STATUS_MISSION_EXEC_run,  		// 执行 /从n开始 /切换到n
+		STATUS_MISSION_EXEC_pause, 		// 暂停
+		STATUS_MISSION_EXEC_prepare_takeoff, // 预备起飞
+		STATUS_MISSION_EXEC_prepare_move,	 // 预备移动
+		STATUS_MISSION_EXEC_emeland,	// 紧急 降落
+
+	};
+
+	ENUM_EXEC_MISSION_STATUS mission_exec_status_current = STATUS_MISSION_EXEC_NAN;	// 当前 任务exec的状态
+	int mission_exec_status_last = 0;	 	// 上个 任务exec的状态
+
+
+
+
+	// TODO error 需要 反馈 回地面站 ?
+
+
+
+	// TBC
 	ros::Publisher  pub_CurrentMissionState; // 告知其他节点 Mission State
 	std_msgs::UInt8 msg_mission_state;
 

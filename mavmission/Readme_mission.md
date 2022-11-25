@@ -64,6 +64,36 @@ task_part 任务的具体解析和执行
 
 
 
+#### 任务执行 [ mission_exec_cb 切换逻辑]
+
+```Mermaid
+
+stateDiagram-v2
+
+[*] --> MISSION_STATE_CHECKED : task_part完成校验
+
+MISSION_STATE_CHECKED --> 任务Init : mission_exec.instruct_status=1(从n开始) 
+
+任务Init --> 子任务解析执行parses_current_mission_task()
+
+子任务解析执行parses_current_mission_task() --> 子任务完成判断
+
+子任务完成判断 --> 下一个任务 
+
+下一个任务 --> 子任务解析执行parses_current_mission_task()
+
+子任务解析执行parses_current_mission_task() --> 暂停悬停 : mission_exec.instruct_status=2(暂停) 
+
+暂停悬停 --> 子任务解析执行parses_current_mission_task() : mission_exec.instruct_status=3(继续已暂停的任务) 
+
+子任务解析执行parses_current_mission_task() --> 紧急降落 : mission_exec.instruct_status=4(紧急降落) 
+
+子任务解析执行parses_current_mission_task() --> 结束降落 : mission_exec.instruct_status=5(结束降落) 
+
+子任务解析执行parses_current_mission_task() --> 结束悬停 : mission_exec.instruct_status=6(结束悬停)
+
+```
+
 
 
 ### [TBC] 各状态的切换逻辑
